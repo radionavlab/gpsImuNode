@@ -61,8 +61,11 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
     imuAccelMeas = Raccel*imuAccelMeas;
     imuAttRateMeas = Rgyro*imuAttRateMeas;
 
+    tOffsetRosToUTC_ = tGPS - (ros::Time::now()).toSec();
+    hasRosToUTC_=true;
+
     //Run CF if calibrated
-    if(isCalibrated_)
+    if(isCalibratedLynx_)
     {
         imuSeq++;
         double dtLastProc = thisTime - tLastProcessed_;
@@ -70,9 +73,9 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
         { 
             //Construct measurements
             const imuMeas thisImuMeas(thisTime,imuAccelMeas,imuAttRateMeas);
-            lastImuMeas_ = thisImuMeas;
+            lastImuMeasLynx_ = thisImuMeas; //Used for reporting wB in publishOdomAndMocap
 
-            imuFilter_.runUKFpropagateOnly(tLastProcessed_,thisImuMeas);
+            imuFilterLynx_.runUKFpropagateOnly(tLastProcessed_,thisImuMeas);
 
             //Publish
             updateType = "imu"; publishOdomAndMocap();
@@ -106,14 +109,91 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
         // Try ground calibration step for simplicity
         if(counter>=100)
         {
-            isCalibrated_ = true;
+            isCalibratedLynx_ = true;
             tLastProcessed_ = thisTime;
-            imuFilter_.setState(xState,RBI_);
+            imuFilterLynx_.setState(xState,RBI_);
             //std::cout << "state0" <<std::endl<<xState<<std::endl;
         }
     }
-
 }
+
+
+//PUBLISHING DISABLED, WILL REQUIRE TESTING.
+void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
+{
+    //If the time offset has not been recorded
+    if(~hasRosToUTC_)
+    {
+        return;
+    }
+
+    static double tLastImu=0;
+    static int counter=0;
+    static uint64_t imuSeq=0;
+    static Eigen::Vector3d ba0=Eigen::Vector3d(0,0,0);
+    static Eigen::Vector3d bg0=Eigen::Vector3d(0,0,0);
+
+    double thisTime = (msg->header.stamp).toSec() + tOffsetRosToUTC_;
+    Eigen::Vector3d imuAccelMeas, imuAttRateMeas;
+    imuAccelMeas(0) = msg->linear_acceleration.x;
+    imuAccelMeas(1) = msg->linear_acceleration.y;
+    imuAccelMeas(2) = msg->linear_acceleration.z;
+    imuAttRateMeas(0) = msg->angular_velocity.x;
+    imuAttRateMeas(1) = msg->angular_velocity.y;
+    imuAttRateMeas(2) = msg->angular_velocity.z;
+
+
+    //Run CF if calibrated
+    if(isCalibratedSnap_)
+    {
+        imuSeq++;
+        double dtLastProc = thisTime - tLastProcessed_;
+        if(dtLastProc>0) //Just in case a gps message is received late
+        { 
+            //Construct measurements
+            const imuMeas thisImuMeas(thisTime,imuAccelMeas,imuAttRateMeas);
+
+            //imuFilterSnap_.runUKFpropagateOnly(tLastProcessed_,thisImuMeas);
+
+            /*//Publish
+            updateType = "imu"; publishOdomAndMocap();
+            //RBI_ is updated when publisher is called.
+
+            //Cleanup
+            tLastProcessed_ = thisTime;
+
+            //Warn if signal is lost
+            if( (thisTime-lastRTKtime_ > 0.5) || (thisTime-lastA2Dtime_ > 0.5) )
+            {
+                if(warnCounter%40==0)
+                {ROS_INFO("GPS outage warning!");}
+                warnCounter++;
+            }else
+            {
+                if(warnCounter!=0)
+                {ROS_INFO("GPS restored.");}
+                warnCounter=0;
+            }*/
+        }
+    }else if(rbiIsInitialized_)  //if RBI has been calculated but the biases have not been calculated
+    { 
+        ba0=ba0+0.01*(imuAccelMeas - RBI_.transpose()*Eigen::Vector3d(0,0,9.8)); //inefficient
+        bg0=bg0+0.01*imuAttRateMeas;
+        Eigen::Vector3d rI0;
+        rI0 = rPrimaryMeas_ - RBI_.transpose()*Lcg2p_;
+        Eigen::Matrix<double,15,1> xState;
+        xState<<rI0(0),rI0(1),rI0(2), 0,0,0, 0,0,0, ba0(0),ba0(1),ba0(2), bg0(0),bg0(1),bg0(2);
+        counter++;
+        // Try ground calibration step for simplicity
+        if(counter>=100)
+        {
+            isCalibratedSnap_ = true;
+            //tLastProcessed_ = thisTime;
+            imuFilterSnap_.setState(xState,RBI_);
+        }
+    }
+}
+
 
 void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
 {
@@ -146,10 +226,10 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
             internalSeq++;
             double dtLastProc = ttime-tLastProcessed_;
 
-            if(isCalibrated_ && dtLastProc>0)
+            if(isCalibratedLynx_ && dtLastProc>0)
             {
                 const gpsMeas thisGpsMeas(ttime,rPrimaryMeas_,rS2PMeas_);
-                imuFilter_.runUKF(lastImuMeas_,thisGpsMeas);
+                imuFilterLynx_.runUKF(lastImuMeasLynx_,thisGpsMeas);
 
                 //Publish messages
                 updateType = "gps";
@@ -233,10 +313,10 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
         double dtLastProc = ttime-tLastProcessed_;
         //if(dtLastProc<0)
         //  { std::cout << "Negative times!" << "gps: " << ttime << "  imu: "<< tLastProcessed_ <<std::endl;}
-        if(isCalibrated_ && dtLastProc>0)
+        if(isCalibratedLynx_ && dtLastProc>0)
         {
             const gpsMeas thisGpsMeas(ttime,rPrimaryMeas_,rS2PMeas_);
-            imuFilter_.runUKF(lastImuMeas_,thisGpsMeas);
+            imuFilterLynx_.runUKF(lastImuMeasLynx_,thisGpsMeas);
 
             //Publish messages
             updateType = "gps";
@@ -288,13 +368,13 @@ void estimationNode::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::Con
 void estimationNode::publishOdomAndMocap()
 {
     Eigen::Matrix<double,15,15> Preport;
-    imuFilter_.getCovariance(Preport);
+    imuFilterLynx_.getCovariance(Preport);
 
     //Update rotation matrix and force orthonormality  
     Eigen::Matrix<double,15,1> xState;
     Eigen::Vector3d imuAccel,imuAttRate;
     double tlastImu;
-    imuFilter_.getState(xState, RBI_);
+    imuFilterLynx_.getState(xState, RBI_);
 
     nav_msgs::Odometry localOdom_msg;
 
@@ -316,7 +396,7 @@ void estimationNode::publishOdomAndMocap()
     localOdom_msg.pose.pose.orientation.w=q0.w();
 
     //Remove biases
-    lastImuMeas_.getMeas(tlastImu,imuAccel,imuAttRate);
+    lastImuMeasLynx_.getMeas(tlastImu,imuAccel,imuAttRate);
     localOdom_msg.twist.twist.angular.x=imuAttRate(0)-xState(12);
     localOdom_msg.twist.twist.angular.y=imuAttRate(1)-xState(13);
     localOdom_msg.twist.twist.angular.z=imuAttRate(2)-xState(14);

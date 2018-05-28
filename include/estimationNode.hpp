@@ -4,6 +4,7 @@
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
+#include <sensor_msgs/Imu.h>
 #include <Eigen/Geometry>
 #include <Eigen/Eigenvalues>
 #include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>
@@ -35,6 +36,7 @@ class estimationNode
     void imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg);
     void navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg);
     void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);
+    void mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg);
     void publishOdomAndMocap();
 
     //Math helper functions
@@ -58,8 +60,8 @@ class estimationNode
 
     ros::Publisher localOdom_pub_, mocap_pub_;
     std::string child_frame_id_;
-    gpsImu imuFilter_;
-    imuMeas lastImuMeas_;
+    gpsImu imuFilterLynx_, imuFilterSnap_;
+    imuMeas lastImuMeasLynx_;
 
     tf2_ros::TransformBroadcaster tf_broadcaster_;
 
@@ -67,13 +69,13 @@ class estimationNode
     Eigen::Matrix3d Recef2enu_, Rwrw_, Recef2wrw_, RBI_, QgyroOutput_;
     Eigen::Matrix<double,21,3> rCtildeCalib_, rBCalib_;
 
-    ros::Subscriber gps_sub_, rtkSub_, a2dSub_, imuSub_, imuConfigSub_, tOffsetSub_, navSub_;
+    ros::Subscriber gps_sub_, rtkSub_, a2dSub_, imuSub_, imuConfigSub_, tOffsetSub_, navSub_, mavrosImuSub_;
 
     int internalSeq;
-    double lastRTKtime_, lastA2Dtime_, minTestStat_, imuConfigAccel_, imuConfigAttRate_, 
+    double lastRTKtime_, lastA2Dtime_, minTestStat_, imuConfigAccel_, imuConfigAttRate_, tOffsetRosToUTC_,
         pi, tLastProcessed_, tnavsolFracSecs_, sec_in_week_, toffsetFracSecs_, dtRXinMeters_;
     bool validRTKtest_, validA2Dtest_, hasAlreadyReceivedA2D_, hasAlreadyReceivedRTK_, rbiIsInitialized_,
-        isCalibrated_, publish_tf_;
+        isCalibratedLynx_, isCalibratedSnap_, publish_tf_, hasRosToUTC_;
 
     long long int tIndexConfig_;
     uint32_t toffsetWeek_, toffsetSecOfWeek_;

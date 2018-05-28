@@ -121,7 +121,6 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     //P6diagElements << 0.000036,0.000036,0.000144, 0.000144,0.000144,0.000144;  //Params file
     P6diagElements << 0.000036,0.000036,0.000019, 0.000144,0.000144,0.000144;  //Test values
     Rk = P6diagElements.asDiagonal();
-        
 
     //IMU params
     const double dtIMU=1.0/73.25; //from (rostopic hz /phoenix/imu -r 10)/10
@@ -172,7 +171,9 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
 
     //First get rbi(0), then get biases(0)
     rbiIsInitialized_ = false;
-    isCalibrated_=false;
+    isCalibratedLynx_ = false;
+    isCalibratedSnap_ = false;
+    hasRosToUTC_ = false;
 
     // Initialize publishers and subscribers
     //odom_pub_ = nh.advertise<nav_msgs::Odometry>("odom", 10); //MUST have a node namespace, ns="quadName", in launchfile
@@ -192,6 +193,8 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     navSub_ = nh.subscribe("NavigationSolution",10,&estimationNode::navsolCallback,
                                                         this, ros::TransportHints().tcpNoDelay());
     tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&estimationNode::tOffsetCallback,
+                                                        this, ros::TransportHints().tcpNoDelay());
+    mavrosImuSub_ = nh.subscribe("mavros/imu/data_raw",10,&estimationNode::mavrosImuCallback,
                                                         this, ros::TransportHints().tcpNoDelay());
 
     //Load IMU config data, establish saturations
@@ -225,10 +228,18 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     ROS_INFO("Time offset from RX to GPS obtained.");
 
     ROS_INFO("Setting hard parameters for complementary filter.");
-    imuFilter_.setLevers(Lcg2p_,Lcg2imu_,Ls2p_);
-    imuFilter_.setCovariances(dtIMU, Qk12, Pimu, Rk);
-    imuFilter_.setImuParams(tauA,tauG);
-    imuFilter_.setBiasSaturationLimits(maxBa, maxBg);
+    //Lynx
+    imuFilterLynx_.setLevers(Lcg2p_,Lcg2imu_,Ls2p_);
+    imuFilterLynx_.setCovariances(dtIMU, Qk12, Pimu, Rk);
+    imuFilterLynx_.setImuParams(tauA,tauG);
+    imuFilterLynx_.setBiasSaturationLimits(maxBa, maxBg);
+    
+    //Snap
+    imuFilterSnap_.setLevers(Lcg2p_,Eigen::Vector3d(0.0684,0.0134,-0.0399),Ls2p_);
+    imuFilterSnap_.setCovariances(dtIMU, Qk12, Pimu, Rk);
+    imuFilterSnap_.setImuParams(tauA,tauG);
+    imuFilterSnap_.setBiasSaturationLimits(maxBa, maxBg);
+    
 
     ROS_INFO("Startup complete.");
 }

@@ -2,14 +2,15 @@
 <package>
   <name>gps_imu</name>
   <version>0.0.0</version>
-  <description>The gps_kf package</description>
+  <description>The gps_imu package for IMU integration with ROS</description>
 
-  <maintainer email="mma2739@todo.todo">mma2739</maintainer>
+  <maintainer email="nick30075@utexas.edu">nickMont</maintainer>
 
   <license>TODO</license>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>tf2_ros</build_depend>
   <build_depend>cmake_modules</build_depend>
@@ -17,6 +18,7 @@
   <build_depend>gbx_ros_bridge_msgs</build_depend>
   
   <run_depend>geometry_msgs</run_depend>
+  <run_depend>sensor_msgs</run_depend>
   <run_depend>std_msgs</run_depend>
   <run_depend>tf2_ros</run_depend>
   <run_depend>cmake_modules</run_depend> 
