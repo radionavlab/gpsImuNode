@@ -52,6 +52,7 @@ class estimationNode
     double symmetricSaturationDouble(const double inval, const double maxval);
     Eigen::Matrix3d euler2dcm312(const Eigen::Vector3d ee);
     Eigen::Matrix3d euler2dcm321(Eigen::Vector3d ee);
+    double tgpsToSec(const int week, const int secOfWeek, const double fracSec);
 
  private:
     void PublishTransform(const geometry_msgs::Pose &pose,
@@ -61,6 +62,7 @@ class estimationNode
     ros::Publisher localOdom_pub_, mocap_pub_;
     std::string child_frame_id_;
     gpsImu imuFilterLynx_, imuFilterSnap_;
+    filterHelper lynxHelper_, snapHelper_;
     imuMeas lastImuMeasLynx_;
 
     tf2_ros::TransformBroadcaster tf_broadcaster_;
@@ -73,12 +75,11 @@ class estimationNode
 
     int internalSeq;
     double lastRTKtime_, lastA2Dtime_, minTestStat_, imuConfigAccel_, imuConfigAttRate_, tOffsetRosToUTC_,
-        pi, tLastProcessed_, tnavsolFracSecs_, sec_in_week_, toffsetFracSecs_, dtRXinMeters_;
+        pi, sec_in_week_, dtRXinMeters_;
     bool validRTKtest_, validA2Dtest_, hasAlreadyReceivedA2D_, hasAlreadyReceivedRTK_, rbiIsInitialized_,
         isCalibratedLynx_, isCalibratedSnap_, publish_tf_, hasRosToUTC_;
 
     long long int tIndexConfig_;
-    uint32_t toffsetWeek_, toffsetSecOfWeek_;
     uint64_t sampleFreqNum_, sampleFreqDen_;
 
     std::string updateType;

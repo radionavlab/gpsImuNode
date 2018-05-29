@@ -156,4 +156,12 @@ Eigen::Matrix3d estimationNode::euler2dcm321(Eigen::Vector3d ee)
   return RR;
 }
 
+
+double estimationNode::tgpsToSec(const int week, const int secOfWeek, const double fracSec)
+{
+	static const int SEC_PER_WEEK(604800);
+	return fracSec + secOfWeek + SEC_PER_WEEK*week;
+}
+
+
 }

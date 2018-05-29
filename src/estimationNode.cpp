@@ -216,9 +216,10 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     ROS_INFO("Waiting for offset time, this may take a moment...");
     gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr toffsetMsg =
                 ros::topic::waitForMessage<gbx_ros_bridge_msgs::ObservablesMeasurementTime>("ObservablesMeasurementTime");
-    toffsetWeek_ = toffsetMsg->tOffset.week;
-    toffsetSecOfWeek_ = toffsetMsg->tOffset.secondsOfWeek;
-    toffsetFracSecs_ = toffsetMsg->tOffset.fractionOfSecond;
+    int toffsetWeek = toffsetMsg->tOffset.week;
+    int toffsetSecOfWeek = toffsetMsg->tOffset.secondsOfWeek;
+    double toffsetFracSecs = toffsetMsg->tOffset.fractionOfSecond;
+    lynxHelper_.setTOffset(tgpsToSec(toffsetWeek,toffsetSecOfWeek,toffsetFracSecs));
     ROS_INFO("Time offset from RRT to ORT recorded.");
 
     //Get dtRX0

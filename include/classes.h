@@ -51,3 +51,19 @@ class imuMeas
 		Eigen::Vector3d a_, wB_;
 };
 
+
+class filterHelper
+{
+	public:
+		filterHelper() {tOffsetSec_=0.0; tLastProc_=0.0;}
+		void setTOffset(const double t) {tOffsetSec_ = t;}
+		void setTLastProc(const double t) {tLastProc_ = t;}
+		void setLastImuMeas(const imuMeas &lastMeas) {lastImuMeas_=lastMeas;}
+		double getTOffset() const {return tOffsetSec_;}
+		double getTLastProc() const {return tLastProc_;}
+		imuMeas getLastImuMeas() const {return lastImuMeas_;}
+	private:
+		double tOffsetSec_, tLastProc_;
+		imuMeas lastImuMeas_;
+};
+
