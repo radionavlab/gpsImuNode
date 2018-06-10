@@ -1,4 +1,4 @@
-#include "filter.h"
+#include "filter.hpp"
 #include <Eigen/LU>
 
 namespace gpsimu_odom {

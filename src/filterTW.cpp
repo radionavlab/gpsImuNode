@@ -1,4 +1,4 @@
-#include "filterTW.h"
+#include "filterTW.hpp"
 #include <Eigen/LU>  // For matrix inverse
 
 namespace gpsimu_odom {

@@ -4,6 +4,10 @@
 
 namespace gpsimu_odom
 {
+
+/*Called when a gps measurement is received.  Propagates from the last imu time to
+current gps time, then performs measurement update step.  The &imu argument is the
+last imu measurement received before the gps measurement was received*/
 void gpsImu::runUKF(const imuMeas &imu, const gpsMeas &gps)
 {
 	double timu, tgps, dt0;
@@ -30,6 +34,7 @@ void gpsImu::runUKF(const imuMeas &imu, const gpsMeas &gps)
 }
 
 
+//Only run propagation step of UKF, called whenver an imu measurement is received.
 void gpsImu::runUKFpropagateOnly(const double tPrev, const imuMeas &imu)
 {
 	double timu, dt0;
@@ -54,7 +59,9 @@ void gpsImu::runUKFpropagateOnly(const double tPrev, const imuMeas &imu)
 }
 
 
-//Dynamic nonlinear propagation for IMU data. NOTE: This handles noise and noise rate for gyro/accel
+/*Dynamic nonlinear propagation for IMU data. NOTE: This handles noise and noise rate for gyro/accel
+Assumes a 15-element state; matrix sizes are hardcoded instead of being dynamically handled to 
+speed up operation.*/
 Eigen::Matrix<double,15,1> gpsImu::fdynSPKF(const Eigen::Matrix<double,15,1> &x0, const double dt,
 	const Eigen::Vector3d &fB0, const Eigen::Matrix<double,12,1> &vk, const Eigen::Vector3d &wB0,
 	const Eigen::Matrix3d &RR, const Eigen::Vector3d &lAB)
@@ -90,7 +97,7 @@ Eigen::Matrix<double,15,1> gpsImu::fdynSPKF(const Eigen::Matrix<double,15,1> &x0
 	return x1;
 }
 
-//True state nonlinear measurement equation. lcg2p assumed a unit3 already
+//True state nonlinear measurement equation.  Again using a 15-element state.
 Eigen::Matrix<double,6,1> gpsImu::hnonlinSPKF(const Eigen::Matrix<double,15,1> &x0,
 	const Eigen::Matrix3d &RR, const Eigen::Vector3d &ls2p, const Eigen::Vector3d &lcg2p,
 	const Eigen::Matrix<double,6,1> &vk)
@@ -105,7 +112,7 @@ Eigen::Matrix<double,6,1> gpsImu::hnonlinSPKF(const Eigen::Matrix<double,15,1> &
 }
 
 
-//Hardcoding matrix sizes instead of doing dynamic resizing to preserve speed
+//Propagation step for the UKF with a state vector of length 15
 void gpsImu::spkfPropagate15(const Eigen::Matrix<double,15,1> &x0, const Eigen::Matrix<double,15,15> &P0,
 	const Eigen::Matrix<double,12,12> &Q, const double dt, const Eigen::Vector3d &fB0, const Eigen::Vector3d &wB0,
 	const Eigen::Matrix3d &RR, const Eigen::Vector3d &lAB, Eigen::Matrix<double,15,1> &xkp1, Eigen::Matrix<double,15,15> &Pkp1)
@@ -143,7 +150,7 @@ void gpsImu::spkfPropagate15(const Eigen::Matrix<double,15,1> &x0, const Eigen::
 	spSign=1.0;
 	for(int ij=0; ij<2*nn; ij++)
 	{
-		//std::cout << "XBAR:" << std::endl << xBar <<std::endl;
+		//iterate left -> right columns, flip sign, iterate left-right columns again
 		colno = ij%nn;
 		if(ij>=nn)
 		{
@@ -174,8 +181,7 @@ void gpsImu::spkfPropagate15(const Eigen::Matrix<double,15,1> &x0, const Eigen::
 }
 
 
-//Hardcoding matrix sizes instead of doing dynamic resizing to preserve speed
-//lcg2p, ls2p are the real values of the antenna locations in the body.  ls2p will be unit3'd inside of this function.
+//UKF measurement update.  15-element state, same order as propgation
 void gpsImu::spkfMeasure6(const Eigen::Matrix<double,15,1> &x0, const Eigen::Matrix<double,15,15> &P0,
 	const Eigen::Matrix<double,6,6> &R, const Eigen::Vector3d &rI_measurement, const Eigen::Vector3d &rCu_measurement,
 	const Eigen::Matrix3d &RR, const Eigen::Vector3d &lcg2p, const Eigen::Vector3d &ls2p,
@@ -254,6 +260,26 @@ void gpsImu::spkfMeasure6(const Eigen::Matrix<double,15,1> &x0, const Eigen::Mat
 }
 
 
+void gpsImu::saturateBiases(const double baMax, const double bgMax)
+{
+	//Saturation
+	for(int ij=0; ij<3; ij++)
+	{
+		xState_(ij+9) = symmetricSaturationDouble(xState_(ij+9),baMax);
+	}
+	for(int ij=0; ij<3; ij++)
+	{
+		xState_(ij+12) = symmetricSaturationDouble(xState_(ij+12),bgMax);
+	}
+}
+
+
+//
+//
+//
+//
+
+/*
 //Rotation matrix
 Eigen::Matrix3d gpsImu::euler2dcm312(const Eigen::Vector3d &ee)
 {
@@ -343,20 +369,6 @@ double gpsImu::symmetricSaturationDouble(const double inval, const double maxval
 }
 
 
-void gpsImu::saturateBiases(const double baMax, const double bgMax)
-{
-	//Saturation
-	for(int ij=0; ij<3; ij++)
-	{
-		xState_(ij+9) = symmetricSaturationDouble(xState_(ij+9),baMax);
-	}
-	for(int ij=0; ij<3; ij++)
-	{
-		xState_(ij+12) = symmetricSaturationDouble(xState_(ij+12),bgMax);
-	}
-}
-
-
 
 Eigen::Matrix3d gpsImu::orthonormalize(const Eigen::Matrix3d &inmat)
 {
@@ -424,9 +436,6 @@ Eigen::Matrix3d gpsImu::rotMatFromQuat(const Eigen::Quaterniond &qq)
 	const double zz=qq.z();
 	const double ww=qq.w();
 	Eigen::Matrix3d RR;
-  /*RR << 1-2*yy*yy-2*zz*zz, 2*xx*yy+2*ww*zz, 2*xx*zz-2*ww*yy,
-        2*xx*yy-2*ww*zz, 1-2*xx*xx-2*zz*zz, 2*yy*zz+2*ww*xx,
-        2*xx*zz+2*ww*yy, 2*yy*zz-2*ww*xx, 1-2*xx*xx-2*yy*yy; // the transposed derp*/
 	RR << 1-2*yy*yy-2*zz*zz, 2*xx*yy-2*ww*zz, 2*xx*zz+2*ww*yy,
     	2*xx*yy+2*ww*zz, 1-2*xx*xx-2*zz*zz, 2*yy*zz-2*ww*xx,
     	2*xx*zz-2*ww*yy, 2*yy*zz+2*ww*xx, 1-2*xx*xx-2*yy*yy;
@@ -444,6 +453,6 @@ Eigen::Matrix3d gpsImu::rotMatFromEuler(const Eigen::Vector3d &ee)
       sin(phi)*sin(theta)*cos(psi)-cos(phi)*sin(psi), sin(theta)*sin(phi)*sin(psi)+cos(phi)*cos(psi), sin(phi)*cos(theta),
       cos(phi)*sin(theta)*cos(psi)+sin(phi)*sin(psi), cos(phi)*sin(theta)*sin(psi)-sin(phi)*cos(psi), cos(phi)*cos(theta);
   return RR;
-}
+}*/
 
 }

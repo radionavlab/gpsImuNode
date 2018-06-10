@@ -3,6 +3,11 @@
 #include <string>
 #include <iostream>
 
+/*Contains two gps helper functions and the main initialization function
+for the ROS class*/
+
+
+
 Eigen::Matrix3d ecef2enu_rotMatrix(Eigen::Vector3d ECEF){
 
 
@@ -63,6 +68,8 @@ Eigen::Vector3d ecef2enu(Eigen::Vector3d ECEF){
 
 namespace gpsimu_odom
 {
+
+//Initializes all ROS work
 estimationNode::estimationNode(ros::NodeHandle &nh)
 {
 
@@ -267,22 +274,3 @@ void estimationNode::PublishTransform(const geometry_msgs::Pose &pose,
 
 
 } //end namespace
-
-
-int main(int argc, char **argv)
-{
-    ros::init(argc, argv, "gpsimu_odom");
-    ros::NodeHandle nh;
-
-    try
-    {
-        gpsimu_odom::estimationNode gpsimu_odom(nh);
-        ros::spin();
-    }
-    catch(const std::exception &e)
-    {
-        ROS_ERROR("%s: %s", nh.getNamespace().c_str(), e.what());
-        return 1;
-    }
-    return 0;
-}

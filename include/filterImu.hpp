@@ -2,8 +2,9 @@
 #include <Eigen/Eigenvalues>
 #include <cmath>
 #include <iostream>
-#include "classes.h"
+#include "classes.hpp"
 #include <ros/ros.h>
+#include "mathHelperFunctions.hpp"
 
 namespace gpsimu_odom
 {
@@ -41,21 +42,6 @@ class gpsImu
 
 	private:
 	    Eigen::Vector3d Limu_, Ls2p_, Lcg2p_;
-
-        //Helper functions
-        Eigen::Matrix3d updateRBIfromGamma(const Eigen::Matrix3d &R0, const Eigen::Vector3d &gamma);
-        void updateRBIfromGamma(Eigen::Matrix3d &R0, Eigen::Matrix<double,15,1> &x0);
-        Eigen::Matrix3d hatmat(const Eigen::Vector3d &v1);
-        Eigen::Matrix3d rotMatFromEuler(const Eigen::Vector3d &ee);
-        Eigen::Matrix3d rotMatFromWahba(const Eigen::VectorXd &weights, const::Eigen::MatrixXd &vI,
-           const::Eigen::MatrixXd &vB);
-        Eigen::Quaterniond rotmat2quat(const Eigen::Matrix3d &RR);
-        Eigen::Vector3d unit3(const Eigen::Vector3d &v1);
-        Eigen::Matrix3d orthonormalize(const Eigen::Matrix3d &inmat);
-        Eigen::Matrix3d rotMatFromQuat(const Eigen::Quaterniond &qq);
-        void saturateBiases(const double baMax, const double bgMax);
-        double symmetricSaturationDouble(const double inval, const double maxval);
-        Eigen::Matrix3d euler2dcm312(const Eigen::Vector3d &ee);
         
         //UKF functions
         void spkfPropagate15(const Eigen::Matrix<double,15,1> &x0, const Eigen::Matrix<double,15,15> &P0,
@@ -71,6 +57,7 @@ class gpsImu
         Eigen::Matrix<double,15,1> fdynSPKF(const Eigen::Matrix<double,15,1> &x0, const double dt,
            const Eigen::Vector3d &fB0, const Eigen::Matrix<double,12,1> &vk, const Eigen::Vector3d &wB0,
            const Eigen::Matrix3d &RR, const Eigen::Vector3d &lAB);
+        void saturateBiases(const double baMax, const double bgMax);
 
       	Eigen::Matrix3d Recef2enu, Rwrw, R_G2wrw, RBI_;
         Eigen::Matrix<double,21,3> rCtildeCalib, rBCalib;

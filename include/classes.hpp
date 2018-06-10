@@ -1,9 +1,10 @@
+#pragma once
 #include <Eigen/Geometry>
 #include <stdint.h>
 #include <cmath>
-//Might be wise to include a IFNDEF to this
 
-//Contains data storage classes
+//Contains data storage classes for gps time, gps measurements (in UTC), imu measurements (in system time).
+//Also contains a filterHelper class that contains an offset from tImu to tGps.
 
 class gpsTime
 {

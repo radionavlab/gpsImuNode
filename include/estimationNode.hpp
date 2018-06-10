@@ -1,3 +1,5 @@
+#pragma once
+
 #include <ros/ros.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <std_msgs/Float64.h>
@@ -17,10 +19,11 @@
 //#include <stdint.h>
 #include <cmath>
 
-#include "filter.h"
-#include "filterTW.h"
-//#include "classes.h" //Included in filterImu.hpp
+#include "filter.hpp"
+#include "filterTW.hpp"
+#include "classes.hpp" //Included in filterImu.hpp
 #include "filterImu.hpp"
+#include "mathHelperFunctions.hpp"
 
 namespace gpsimu_odom
 {
@@ -39,7 +42,7 @@ class estimationNode
     void mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg);
     void publishOdomAndMocap();
 
-    //Math helper functions
+    /* //Math helper functions
     Eigen::Matrix3d updateRBIfromGamma(const Eigen::Matrix3d R0, const Eigen::Vector3d gamma);
     Eigen::Matrix3d hatmat(const Eigen::Vector3d v1);
     Eigen::Matrix3d rotMatFromWahba(const Eigen::VectorXd weights, const::Eigen::MatrixXd &vI,
@@ -52,7 +55,7 @@ class estimationNode
     double symmetricSaturationDouble(const double inval, const double maxval);
     Eigen::Matrix3d euler2dcm312(const Eigen::Vector3d ee);
     Eigen::Matrix3d euler2dcm321(Eigen::Vector3d ee);
-    double tgpsToSec(const int week, const int secOfWeek, const double fracSec);
+    double tgpsToSec(const int week, const int secOfWeek, const double fracSec);*/
 
  private:
     void PublishTransform(const geometry_msgs::Pose &pose,

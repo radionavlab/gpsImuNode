@@ -7,7 +7,8 @@
 
 namespace gpsimu_odom
 {
-    
+
+//Callback for imu subscriber for the lynx
 void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
 {
     //Initialization variables
@@ -121,7 +122,8 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
 }
 
 
-//PUBLISHING DISABLED, WILL REQUIRE TESTING.
+//Callback for the imu subscriber for the snapdragon.
+//Publishing is disabled, pending microlift testing.
 void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
 {
     //If the time offset has not been recorded
@@ -197,6 +199,7 @@ void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
 }
 
 
+//SBRTK callback.  Takes in message from SBRTK, synchronizes with message from A2D, then calls UKF update
 void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
 {
     double ttime=tgpsToSec(msg->tSolution.week,msg->tSolution.secondsOfWeek,msg->tSolution.fractionOfSecond) - msg->deltRSec;
@@ -250,6 +253,7 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
 }
 
 
+//A2D callback.  Takes in message from A2D, synchronizes with message from A2D, then calls UKF update
 void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg)
 {
     static int rCCalibCounter=0;
@@ -338,6 +342,7 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
 }
 
 
+//Checks navsol to get the most recent figures for dtRX
 void estimationNode::navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg)
 {
     dtRXinMeters_ = msg->deltatRxMeters;
@@ -367,7 +372,7 @@ void estimationNode::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::Con
 }
 
 
-//Publish local_odom and mavros mocap
+//Publish local_odom and mavros mocap.  Called whenever a measurement is processed
 void estimationNode::publishOdomAndMocap()
 {
     Eigen::Matrix<double,15,15> Preport;

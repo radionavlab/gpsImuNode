@@ -1,10 +1,11 @@
-#ifndef GPS_ODOM_FILTER_H_
-#define GPS_ODOM_FILTER_H_
-
+#pragma once
 #include <Eigen/Core>
 
-namespace gpsimu_odom {
+//linear KF
 
+namespace gpsimu_odom
+{
+  
 class KalmanFilter {
  public:
   static const int n_states = 6;
@@ -45,4 +46,3 @@ class KalmanFilter {
 
 }  // namespace gps_odom
 
-#endif  // GPS_ODOM_FILTER_H_
