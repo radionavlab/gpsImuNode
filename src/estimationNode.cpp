@@ -183,26 +183,55 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     hasRosToUTC_ = false;
 
     // Initialize publishers and subscribers
-    //odom_pub_ = nh.advertise<nav_msgs::Odometry>("odom", 10); //MUST have a node namespace, ns="quadName", in launchfile
-    localOdom_pub_ = nh.advertise<nav_msgs::Odometry>("local_odom_INS", 10);
-    mocap_pub_ = nh.advertise<geometry_msgs::PoseStamped>("mavros/mocap/pose_INS", 10);
-/*  gps_sub_ = nh.subscribe(quadPoseTopic, 10, &estimationNode::gpsCallback,
-                                                        this, ros::TransportHints().tcpNoDelay());*/
-//  internalPosePub_ = nh.advertise<geometry_msgs::PoseStamped>(posePubTopic,10);
-    rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&estimationNode::singleBaselineRTKCallback,
-                                                        this, ros::TransportHints().tcpNoDelay());
-    a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
-                                                        this, ros::TransportHints().tcpNoDelay());
-    imuSub_ = nh.subscribe("IMU",10, &estimationNode::imuDataCallback,
-                                                        this, ros::TransportHints().tcpNoDelay());
-    imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
-                                                        this, ros::TransportHints().tcpNoDelay());
-    navSub_ = nh.subscribe("NavigationSolution",10,&estimationNode::navsolCallback,
-                                                        this, ros::TransportHints().tcpNoDelay());
-    tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&estimationNode::tOffsetCallback,
-                                                        this, ros::TransportHints().tcpNoDelay());
-    mavrosImuSub_ = nh.subscribe("mavros/imu/data_raw",10,&estimationNode::mavrosImuCallback,
-                                                        this, ros::TransportHints().tcpNoDelay());
+    bool useUDPinsteadOfTCP = false; //false by default
+    ros::param::get(quadName + "/useUDP",useUDPinsteadOfTCP);
+
+    //Create pubs/subs as TCP/UDP
+    if(~useUDPinsteadOfTCP)  //if using TCP/IP
+    {
+        //Publishers
+        localOdom_pub_ = nh.advertise<nav_msgs::Odometry>("local_odom_INS", 10);
+        mocap_pub_ = nh.advertise<geometry_msgs::PoseStamped>("mavros/mocap/pose_INS", 10);
+
+        //Subscribers
+        rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&estimationNode::singleBaselineRTKCallback,
+                                                    this, ros::TransportHints().tcpNoDelay());
+        a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
+                                                    this, ros::TransportHints().tcpNoDelay());
+        imuSub_ = nh.subscribe("IMU",10, &estimationNode::imuDataCallback,
+                                                    this, ros::TransportHints().tcpNoDelay());
+        imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
+                                                    this, ros::TransportHints().tcpNoDelay());
+        navSub_ = nh.subscribe("NavigationSolution",10,&estimationNode::navsolCallback,
+                                                    this, ros::TransportHints().tcpNoDelay());
+        tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&estimationNode::tOffsetCallback,
+                                                    this, ros::TransportHints().tcpNoDelay());
+        mavrosImuSub_ = nh.subscribe("mavros/imu/data_raw",10,&estimationNode::mavrosImuCallback,
+                                                    this, ros::TransportHints().tcpNoDelay());
+    }else  //if using UDP
+    {
+        //Publishers
+        localOdom_pub_ = nh.advertise<nav_msgs::Odometry>("local_odom_INS", 10);
+        mocap_pub_ = nh.advertise<geometry_msgs::PoseStamped>("mavros/mocap/pose_INS", 10);
+
+        //Subscribers
+        rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&estimationNode::singleBaselineRTKCallback,
+                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+        a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
+                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+        imuSub_ = nh.subscribe("IMU",10, &estimationNode::imuDataCallback,
+                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+        imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
+                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+        navSub_ = nh.subscribe("NavigationSolution",10,&estimationNode::navsolCallback,
+                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+        tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&estimationNode::tOffsetCallback,
+                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+        mavrosImuSub_ = nh.subscribe("mavros/imu/data_raw",10,&estimationNode::mavrosImuCallback,
+                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+        //NOTE:  ros::TransportHints().reliable().tcpNoDelay(true)) is "UDP preferred, use tcpnodelay if UDP"
+        //       is not available (i.e., when the publishing node is a rospy node rather than roscpp).
+    }
 
     //Load IMU config data, establish saturations
     ROS_INFO("Waiting for IMU config data, this may take a moment...");
