@@ -216,20 +216,20 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
 
         //Subscribers
         rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&estimationNode::singleBaselineRTKCallback,
-                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
-                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         imuSub_ = nh.subscribe("IMU",10, &estimationNode::imuDataCallback,
-                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
-                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         navSub_ = nh.subscribe("NavigationSolution",10,&estimationNode::navsolCallback,
-                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&estimationNode::tOffsetCallback,
-                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
+                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         mavrosImuSub_ = nh.subscribe("mavros/imu/data_raw",10,&estimationNode::mavrosImuCallback,
-                                                    this, ros::TransportHints().reliable().tcpNoDelay(true));
-        //NOTE:  ros::TransportHints().reliable().tcpNoDelay(true)) is "UDP preferred, use tcpnodelay if UDP"
+                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
+        //NOTE:  ros::TransportHints().unreliable().reliable().tcpNoDelay(true)) is "UDP preferred, use tcpnodelay if UDP"
         //       is not available (i.e., when the publishing node is a rospy node rather than roscpp).
     }
 
