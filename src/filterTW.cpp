@@ -1,5 +1,5 @@
+//Linear T/W filter class
 #include "filterTW.hpp"
-#include <Eigen/LU>  // For matrix inverse
 
 namespace gpsimu_odom {
 

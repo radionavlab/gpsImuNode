@@ -1,9 +1,8 @@
+//Contains all callbacks related to the Lynx as well as a test callback for the Snap imu.
 #include <Eigen/Geometry>
 #include "estimationNode.hpp"
 #include <string>
 #include <iostream>
-//Contains the two "wordy" A2D and SBRTK callbacks.
-//Also contains some rotation matrix construction
 
 namespace gpsimu_odom
 {

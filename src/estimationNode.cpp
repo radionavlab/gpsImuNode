@@ -1,12 +1,8 @@
-#include <Eigen/Geometry>
+//Class containing ROS publishers/subscribers
 #include "estimationNode.hpp"
-#include <string>
-#include <iostream>
 
 /*Contains two gps helper functions and the main initialization function
 for the ROS class*/
-
-
 
 Eigen::Matrix3d ecef2enu_rotMatrix(Eigen::Vector3d ECEF){
 

@@ -1,5 +1,5 @@
+//IMU/GPS UKF as a complementary filter.
 #include "filterImu.hpp"
-#include <Eigen/SVD>
 
 
 namespace gpsimu_odom

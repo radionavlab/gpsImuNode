@@ -1,4 +1,7 @@
+#pragma once
+//Simple T/W linear filter
 #include <Eigen/Core>
+#include <Eigen/LU>  // For matrix inverse
 
 namespace gpsimu_odom {
 

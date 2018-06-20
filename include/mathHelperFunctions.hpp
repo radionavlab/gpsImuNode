@@ -1,6 +1,8 @@
 #pragma once
+//Contains basic math functions used across all included files
 #include <Eigen/Geometry>
 #include <Eigen/Eigenvalues>
+#include <Eigen/SVD>
 #include <stdio.h>
 #include <iostream>
 

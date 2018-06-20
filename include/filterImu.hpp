@@ -1,5 +1,8 @@
+#pragma once
+//IMU/GPS complementary filter class
 #include <Eigen/Geometry>
 #include <Eigen/Eigenvalues>
+#include <Eigen/SVD>
 #include <cmath>
 #include <iostream>
 #include "classes.hpp"

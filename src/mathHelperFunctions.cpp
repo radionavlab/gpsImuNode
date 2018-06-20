@@ -1,8 +1,5 @@
-#include "mathHelperFunctions.hpp"
-#include <Eigen/SVD>
-
 //Contains matrix helper functions
-
+#include "mathHelperFunctions.hpp"
 
 namespace gpsimu_odom
 {

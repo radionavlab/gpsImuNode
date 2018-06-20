@@ -15,9 +15,9 @@
 #include <gbx_ros_bridge_msgs/ImuConfig.h>
 #include <gbx_ros_bridge_msgs/NavigationSolution.h>
 #include <gbx_ros_bridge_msgs/ObservablesMeasurementTime.h>
-//#include <stdio.h>
-//#include <stdint.h>
 #include <cmath>
+#include <string>
+#include <iostream>
 
 #include "filter.hpp"
 #include "filterTW.hpp"
