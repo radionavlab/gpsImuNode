@@ -19,8 +19,6 @@
 #include <string>
 #include <iostream>
 
-#include "filter.hpp"
-#include "filterTW.hpp"
 #include "classes.hpp" //Included in filterImu.hpp
 #include "filterImu.hpp"
 #include "mathHelperFunctions.hpp"
