@@ -17,8 +17,6 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
     static Eigen::Vector3d ba0Lynx=Eigen::Vector3d(0,0,0);
     static Eigen::Vector3d bg0Lynx=Eigen::Vector3d(0,0,0);
     //gps variables
-    static const int SEC_PER_WEEK(604800);
-    static const double cLight(299792458);
     static const long long int mask = 0xffffffff; // This is: (1 << 32) - 1
     static int warnCounter=0;
     double dt;
@@ -32,14 +30,13 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
     //const double tOffset = toffsetFracSecs_ + toffsetWeek_*SEC_PER_WEEK + toffsetSecOfWeek_;
     const double tOffset = lynxHelper_.getTOffset();
     const double tORT = tRRT + tOffset; //tOffset comes from ObservablesMeasurementTime
-    const double tGPS = tORT - dtRXinMeters_/cLight; //dtrx comes from NavigationSolution
+    const double tGPS = tORT - dtRXinMeters_/SPEED_OF_LIGHT; //dtrx comes from NavigationSolution
     const double thisTime = tGPS;
     std::cout.precision(17);
     dt = thisTime-tLastImu;
     if(dt<=1e-9) //Note: NOT abs(dt), as this checks whether or not messages are received out of order as well
     {
         std::cout << "Error: 1ns between IMU measurements" << std::endl;
-        //std::cout << "Time: " << thisTime-double(toffsetWeek_*SEC_PER_WEEK) <<std::endl;
         return;
     }
     //Only update last time used IF this time is accepted
@@ -54,14 +51,9 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
     imuAttRateMeas(1) = msg->angularRate[1] * imuConfigAttRate_;
     imuAttRateMeas(2) = msg->angularRate[2] * imuConfigAttRate_;
 
-    //Rotate gyro/accel measurements to body frame
-    //NOTE1: this does not need Rpqr convention
-    //NOTE2: this is hardcoded for the lynx as mounted on phoenix and company
-    Eigen::Matrix3d Raccel, Rgyro;
-    Raccel << 0,-1,0, -1,0,0, 0,0,-1;
-    Rgyro  << 0,-1,0, -1,0,0, 0,0,-1;
-    imuAccelMeas = Raccel*imuAccelMeas;
-    imuAttRateMeas = Rgyro*imuAttRateMeas;
+    //LYNX_IMU_ROTATION is defined in constants.hpp
+    imuAccelMeas = LYNX_IMU_ROTATION*imuAccelMeas;
+    imuAttRateMeas = LYNX_IMU_ROTATION*imuAttRateMeas;
 
     double tOffsetRosToUTC = tGPS - (ros::Time::now()).toSec();
     hasRosToUTC_=true;
@@ -115,7 +107,6 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
             isCalibratedLynx_ = true;
             lynxHelper_.setTLastProc(thisTime);
             imuFilterLynx_.setState(xState,RBI_);
-            //std::cout << "state0" <<std::endl<<xState<<std::endl;
         }
     }
 }
@@ -144,11 +135,10 @@ void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
     if(thisTime - tLastImuS<=1e-9) //Note: NOT abs(dt), as this checks whether or not messages are received out of order as well
     {
         std::cout << "Error: 1ns between IMU measurements" << std::endl;
-        //std::cout << "Time: " << thisTime-double(toffsetWeek_*SEC_PER_WEEK) <<std::endl;
         return;
     }
     //Only update last time used IF this time is accepted
-    //tLastImuS=thisTime;
+    
     Eigen::Vector3d imuAccelMeas, imuAttRateMeas;
     imuAccelMeas(0) = msg->linear_acceleration.x;
     imuAccelMeas(1) = msg->linear_acceleration.y;
@@ -157,6 +147,9 @@ void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
     imuAttRateMeas(1) = msg->angular_velocity.y;
     imuAttRateMeas(2) = msg->angular_velocity.z;
 
+    //rotate from measurement frame to body frame
+    imuAccelMeas = SNAP_IMU_ROTATION*imuAccelMeas;
+    imuAttRateMeas = SNAP_IMU_ROTATION*imuAttRateMeas;
 
     //Run CF if calibrated
     if(isCalibratedSnap_)
@@ -169,14 +162,14 @@ void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
             const imuMeas thisImuMeas(thisTime,imuAccelMeas,imuAttRateMeas);
             snapHelper_.setLastImuMeas(thisImuMeas);
 
-            //imuFilterSnap_.runUKFpropagateOnly(tLastProcessed,thisImuMeas);
+            imuFilterSnap_.runUKFpropagateOnly(tLastProcessed,thisImuMeas);
 
-            /*//Publish
+            //Publish
             updateType = "imu"; publishOdomAndMocap();
             //RBI_ is updated when publisher is called.
 
             //Cleanup
-            snapHelper_.setTLastProc(thisTime);*/
+            snapHelper_.setTLastProc(thisTime);
         }
     }else if(rbiIsInitialized_)  //if RBI has been calculated but the biases have not been calculated
     { 
@@ -217,7 +210,6 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
                 tmpvec(1) = msg->ryRov - zeroInECEF_(1);
                 tmpvec(2) = msg->rzRov - zeroInECEF_(2);
                 rPrimaryMeas_ = Rwrw_*(Recef2enu_*tmpvec - zeroInWRW_);
-                //ROS_INFO("%f %f %f %f",msg->rx, msg->rxRov, tmpvec(0), internalPose(0)); //debugging
             }else
             {
                 validRTKtest_=false;
@@ -234,7 +226,7 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
             {
                 const gpsMeas thisGpsMeas(ttime,rPrimaryMeas_,rS2PMeas_);
                 imuFilterLynx_.runUKF(lynxHelper_.getLastImuMeas(),thisGpsMeas);
-//                imuFilterSnap_.runUKF(snapHelper_.getLastImuMeas(),thisGpsMeas);
+                imuFilterSnap_.runUKF(snapHelper_.getLastImuMeas(),thisGpsMeas);
 
                 //Publish messages
                 updateType = "gps";
@@ -317,13 +309,11 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
     {
         internalSeq++;
         double dtLastProc = ttime - lynxHelper_.getTLastProc();
-        //if(dtLastProc<0)
-        //  { std::cout << "Negative times!" << "gps: " << ttime << "  imu: "<< tLastProcessed_ <<std::endl;}
         if(isCalibratedLynx_ && dtLastProc>0)
         {
             const gpsMeas thisGpsMeas(ttime,rPrimaryMeas_,rS2PMeas_);
             imuFilterLynx_.runUKF(lynxHelper_.getLastImuMeas(),thisGpsMeas);
-//            imuFilterSnap_.runUKF(snapHelper_.getLastImuMeas(),thisGpsMeas);
+            imuFilterSnap_.runUKF(snapHelper_.getLastImuMeas(),thisGpsMeas);
 
             //Publish messages
             updateType = "gps";
@@ -395,8 +385,7 @@ void estimationNode::publishOdomAndMocap()
     localOdom_msg.twist.twist.linear.x = xState(3);
     localOdom_msg.twist.twist.linear.y = xState(4);
     localOdom_msg.twist.twist.linear.z = xState(5);
-    //Eigen::Quaterniond q0 = rotmat2quat(RBI_);
-    Eigen::Quaterniond q0(RBI_);
+    Eigen::Quaterniond q0(RBI_); //RBI from lynx only
     localOdom_msg.pose.pose.orientation.x=q0.x();
     localOdom_msg.pose.pose.orientation.y=q0.y();
     localOdom_msg.pose.pose.orientation.z=q0.z();

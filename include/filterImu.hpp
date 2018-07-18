@@ -8,6 +8,7 @@
 #include "classes.hpp"
 #include <ros/ros.h>
 #include "mathHelperFunctions.hpp"
+#include "constants.hpp"
 
 namespace gpsimu_odom
 {

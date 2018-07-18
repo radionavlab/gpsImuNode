@@ -24,6 +24,7 @@
 #include "classes.hpp" //Included in filterImu.hpp
 #include "filterImu.hpp"
 #include "mathHelperFunctions.hpp"
+#include "constants.hpp"
 
 namespace gpsimu_odom
 {
@@ -41,21 +42,6 @@ class estimationNode
     void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);
     void mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg);
     void publishOdomAndMocap();
-
-    /* //Math helper functions
-    Eigen::Matrix3d updateRBIfromGamma(const Eigen::Matrix3d R0, const Eigen::Vector3d gamma);
-    Eigen::Matrix3d hatmat(const Eigen::Vector3d v1);
-    Eigen::Matrix3d rotMatFromWahba(const Eigen::VectorXd weights, const::Eigen::MatrixXd &vI,
-        const::Eigen::MatrixXd &vB);
-    Eigen::Quaterniond rotmat2quat(const Eigen::Matrix3d RR);
-    Eigen::Vector3d unit3(const Eigen::Vector3d v1);
-    Eigen::Matrix3d orthonormalize(const Eigen::Matrix3d inmat);
-    Eigen::Matrix3d rotMatFromQuat(const Eigen::Quaterniond qq);
-    void saturateBiases(const double baMax, const double bgMax);
-    double symmetricSaturationDouble(const double inval, const double maxval);
-    Eigen::Matrix3d euler2dcm312(const Eigen::Vector3d ee);
-    Eigen::Matrix3d euler2dcm321(Eigen::Vector3d ee);
-    double tgpsToSec(const int week, const int secOfWeek, const double fracSec);*/
 
  private:
     void PublishTransform(const geometry_msgs::Pose &pose,

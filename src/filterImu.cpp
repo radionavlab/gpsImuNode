@@ -83,7 +83,7 @@ Eigen::Matrix<double,15,1> gpsImu::fdynSPKF(const Eigen::Matrix<double,15,1> &x0
 	Eigen::Vector3d xkp1 = x + dt*v;
 	Eigen::Vector3d omegaB = wB0 - bg - vgk;
 	Eigen::Vector3d wB_x_wB_x_lAB = omegaB.cross(omegaB.cross(lAB));
-	Eigen::Vector3d a = RR2.transpose()*(fB0 - wB_x_wB_x_lAB - ba - vak) - Eigen::Vector3d(0,0,9.8);
+	Eigen::Vector3d a = RR2.transpose()*(fB0 - wB_x_wB_x_lAB - ba - vak) + GRAVITY_IN_INTERTIAL_FRAME;
 	Eigen::Vector3d vkp1 = v + dt*a;
 	Eigen::Vector3d gammakp1 = gamma + dt*omegaB;
 
@@ -162,7 +162,6 @@ void gpsImu::spkfPropagate15(const Eigen::Matrix<double,15,1> &x0, const Eigen::
 		xStore.col(ij+1) = storeDum;
 		xBar = xBar + w_mean_reg*storeDum;
 	}
-	//std::cout << "xbar:" <<std::endl<<xBar<<std::endl;
 
 	//Recombine for covariance
 	Eigen::Matrix<double,15,15> PbaRk_p1;
@@ -171,12 +170,11 @@ void gpsImu::spkfPropagate15(const Eigen::Matrix<double,15,1> &x0, const Eigen::
 	{
 		PbaRk_p1 = PbaRk_p1 + w_cov_reg*(xStore.col(ij+1)-xBar)*((xStore.col(ij+1)-xBar).transpose());
 	}
-	//std::cout << "Pmax: " << PbaRk_p1.maxCoeff() << std::endl;
 
 	//outputs
 	xkp1 = xBar;
 	Pkp1 = PbaRk_p1;
-	//std::cout << "P:" <<std::endl << Pkp1 <<std::endl;
+
 	return;
 }
 
