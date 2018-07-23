@@ -209,7 +209,7 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
                 tmpvec(0) = msg->rxRov - zeroInECEF_(0); //error vector from ECEF at init time
                 tmpvec(1) = msg->ryRov - zeroInECEF_(1);
                 tmpvec(2) = msg->rzRov - zeroInECEF_(2);
-                rPrimaryMeas_ = Rwrw_*(Recef2enu_*tmpvec - zeroInWRW_);
+                rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec;
             }else
             {
                 validRTKtest_=false;

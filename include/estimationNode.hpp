@@ -54,7 +54,7 @@ class estimationNode
 
     tf2_ros::TransformBroadcaster tf_broadcaster_;
 
-    Eigen::Vector3d zeroInECEF_, zeroInWRW_, rPrimaryMeas_, rS2PMeas_, rPrimaryMeas_mu, Lcg2p_, Ls2p_, Lcg2imu_;
+    Eigen::Vector3d zeroInECEF_, rPrimaryMeas_, rS2PMeas_, rPrimaryMeas_mu, Lcg2p_, Ls2p_, Lcg2imu_;
     Eigen::Matrix3d Recef2enu_, Rwrw_, Recef2wrw_, RBI_, QgyroOutput_;
     Eigen::Matrix<double,21,3> rCtildeCalib_, rBCalib_;
 

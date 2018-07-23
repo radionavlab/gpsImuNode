@@ -19,9 +19,6 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     ros::param::get(quadName + "/arenaCenterX", zeroInECEF_(0));
     ros::param::get(quadName + "/arenaCenterY", zeroInECEF_(1));
     ros::param::get(quadName + "/arenaCenterZ", zeroInECEF_(2));
-    ros::param::get(quadName + "/arenaCenterX_ENU", zeroInWRW_(0));
-    ros::param::get(quadName + "/arenaCenterY_ENU", zeroInWRW_(1));
-    ros::param::get(quadName + "/arenaCenterZ_ENU", zeroInWRW_(2));
     ros::param::get(quadName + "/rtktopic", rtktopic);
     ros::param::get(quadName + "/a2dtopic", a2dtopic);
     ros::param::get(quadName + "/posePubTopic", posePubTopic);
