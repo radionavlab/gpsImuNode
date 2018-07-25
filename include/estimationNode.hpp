@@ -24,6 +24,12 @@
 #include "mathHelperFunctions.hpp"
 #include "constants.hpp"
 
+//gbx includes
+#include "gbxstreamendpointin.h"
+#include "gbxstream.h"
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
+
 namespace gpsimu_odom
 {
 class estimationNode
@@ -32,11 +38,16 @@ class estimationNode
     estimationNode(ros::NodeHandle &nh);
 
     //ROS stuff
-    void singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg);
-    void attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg);
-    void imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg);
-    void imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg);
-    void navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg);
+    GbxStreamEndpoint::ProcessReportReturn processReport_(
+                std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId);
+    GbxStreamEndpoint::ProcessReportReturn processReport_(
+                std::shared_ptr<const ReportMultiBaselineRtkAttitude2D>&& pReport, const u8 streamId);
+    GbxStreamEndpoint::ProcessReportReturn processReport_(
+                std::shared_ptr<const ReportImu>&& pReport, const u8 streamId);
+    GbxStreamEndpoint::ProcessReportReturn processReport_(
+                std::shared_ptr<const ReportImuConfig>&& pReport, const u8 streamId);
+    GbxStreamEndpoint::ProcessReportReturn processReport_(
+                std::shared_ptr<const ReportNavigationSolution>&& pReport, const u8 streamId);
     void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);
     void mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg);
     void publishOdomAndMocap();

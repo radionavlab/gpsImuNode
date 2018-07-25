@@ -116,6 +116,24 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     bool useUDPinsteadOfTCP = false; //false by default
     ros::param::get(quadName + "/useUDP",useUDPinsteadOfTCP);
 
+
+    //GBX stuff
+    auto gbxStream = std::make_shared<GbxStream>();
+    gbxStream->pauseStream();
+    auto epOutput = std::make_shared<GbxStreamEndpointGPSKF>();
+    // Add any other necessary reports here.
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::SINGLE_BASELINE_RTK);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::ATTITUDE_2D);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::IMU);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::IMU_CONFIG);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::NAVIGATION_SOLUTION);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::OBSERVABLES_MEASUREMENT_TIME);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).enableWhitelist();
+    //make endpoint
+    auto epInput = std::make_shared<GbxStreamEndpointIN>(port, OptionObject::protocol_enum::IP_UDP, OptionObject::peer_type_enum::ROVER);
+    gbxStream->resumeStream();    
+
+
     //Create pubs/subs as TCP/UDP
     if(~useUDPinsteadOfTCP)  //if using TCP/IP
     {
@@ -124,18 +142,6 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
         mocap_pub_ = nh.advertise<geometry_msgs::PoseStamped>("mavros/mocap/pose_INS", 10);
 
         //Subscribers
-        rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&estimationNode::singleBaselineRTKCallback,
-                                                    this, ros::TransportHints().tcpNoDelay());
-        a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
-                                                    this, ros::TransportHints().tcpNoDelay());
-        imuSub_ = nh.subscribe("IMU",10, &estimationNode::imuDataCallback,
-                                                    this, ros::TransportHints().tcpNoDelay());
-        imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
-                                                    this, ros::TransportHints().tcpNoDelay());
-        navSub_ = nh.subscribe("NavigationSolution",10,&estimationNode::navsolCallback,
-                                                    this, ros::TransportHints().tcpNoDelay());
-        tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&estimationNode::tOffsetCallback,
-                                                    this, ros::TransportHints().tcpNoDelay());
         mavrosImuSub_ = nh.subscribe("mavros/imu/data_raw",10,&estimationNode::mavrosImuCallback,
                                                     this, ros::TransportHints().tcpNoDelay());
     }else  //if using UDP
@@ -145,18 +151,6 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
         mocap_pub_ = nh.advertise<geometry_msgs::PoseStamped>("mavros/mocap/pose_INS", 10);
 
         //Subscribers
-        rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&estimationNode::singleBaselineRTKCallback,
-                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
-        a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
-                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
-        imuSub_ = nh.subscribe("IMU",10, &estimationNode::imuDataCallback,
-                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
-        imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
-                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
-        navSub_ = nh.subscribe("NavigationSolution",10,&estimationNode::navsolCallback,
-                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
-        tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&estimationNode::tOffsetCallback,
-                                                    this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         mavrosImuSub_ = nh.subscribe("mavros/imu/data_raw",10,&estimationNode::mavrosImuCallback,
                                                     this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         //NOTE:  ros::TransportHints().unreliable().reliable().tcpNoDelay(true)) is "UDP preferred, use tcpnodelay if UDP"

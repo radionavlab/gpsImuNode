@@ -8,7 +8,8 @@ namespace gpsimu_odom
 {
 
 //Callback for imu subscriber for the lynx
-void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
+GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+    std::shared_ptr<const ReportImu>&& pReport, const u8 streamId)
 {
     //Initialization variables
     static int counter=0;
@@ -23,7 +24,7 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
 
     double tLastProcessed = lynxHelper_.getTLastProc();
     //Calculate IMU time
-    const uint64_t tIndex = msg->tIndexTrunc;
+    const uint64_t tIndex = pReport->tIndexTruncated();
     const long long int tIndexFull = (tIndexConfig_ & ~mask) | (tIndex & mask); //Bit-mask, don't bit-shift
     const double sampleFreq = sampleFreqNum_/sampleFreqDen_;
     const double tRRT = tIndexFull/sampleFreq; //tIndexFull is in samples, divide by samples/s
@@ -44,12 +45,12 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
 
     //Use scale parameter
     Eigen::Vector3d imuAccelMeas, imuAttRateMeas;
-    imuAccelMeas(0) = msg->acceleration[0] * imuConfigAccel_;
-    imuAccelMeas(1) = msg->acceleration[1] * imuConfigAccel_;
-    imuAccelMeas(2) = msg->acceleration[2] * imuConfigAccel_;
-    imuAttRateMeas(0) = msg->angularRate[0] * imuConfigAttRate_;
-    imuAttRateMeas(1) = msg->angularRate[1] * imuConfigAttRate_;
-    imuAttRateMeas(2) = msg->angularRate[2] * imuConfigAttRate_;
+    imuAccelMeas(0) = pReport->acceleration[0] * imuConfigAccel_;
+    imuAccelMeas(1) = pReport->acceleration[1] * imuConfigAccel_;
+    imuAccelMeas(2) = pReport->acceleration[2] * imuConfigAccel_;
+    imuAttRateMeas(0) = pReport->angularRate[0] * imuConfigAttRate_;
+    imuAttRateMeas(1) = pReport->angularRate[1] * imuConfigAttRate_;
+    imuAttRateMeas(2) = pReport->angularRate[2] * imuConfigAttRate_;
 
     //LYNX_IMU_ROTATION is defined in constants.hpp
     imuAccelMeas = LYNX_IMU_ROTATION*imuAccelMeas;
@@ -109,6 +110,8 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
             imuFilterLynx_.setState(xState,RBI_);
         }
     }
+    retval = ProcessReportReturn::ACCEPTED;
+    return retval; 
 }
 
 
@@ -192,23 +195,28 @@ void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
 
 
 //SBRTK callback.  Takes in message from SBRTK, synchronizes with message from A2D, then calls UKF update
-void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
+GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+    std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId)
 {
-    double ttime=tgpsToSec(msg->tSolution.week,msg->tSolution.secondsOfWeek,msg->tSolution.fractionOfSecond) - msg->deltRSec;
+    int week, secOfWeek;
+    double fracSec, dtRX;
+    dtRX_=pReport->deltRSec();
+    pReport->tSolution.get(week, secOfWeek, fracSec);
+    double ttime=tgpsToSec(week,secOfWeek,fracSec) - dtRX;
 
-    if(ttime>lastRTKtime_)  //only use newest time
+    if(ttime > lastRTKtime_)  //only use newest time
     {
         hasAlreadyReceivedRTK_=true;
         lastRTKtime_=ttime;
         //If the message is accepted
-        if(msg->testStat > minTestStat_)
+        if(pReport->testStat() > minTestStat_)
             {
                 validRTKtest_=true;
                 Eigen::Vector3d tmpvec;
                 //Rotate rECEF to rI and store in rPrimaryMeas_
-                tmpvec(0) = msg->rxRov - zeroInECEF_(0); //error vector from ECEF at init time
-                tmpvec(1) = msg->ryRov - zeroInECEF_(1);
-                tmpvec(2) = msg->rzRov - zeroInECEF_(2);
+                tmpvec(0) = pReport->rx() - zeroInECEF_(0); //error vector from ECEF at init time
+                tmpvec(1) = pReport->ry() - zeroInECEF_(1);
+                tmpvec(2) = pReport->rz() - zeroInECEF_(2);
                 rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec;
             }else
             {
@@ -241,12 +249,21 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
             hasAlreadyReceivedRTK_=false; hasAlreadyReceivedA2D_=false; 
         }
     }
+    retval = ProcessReportReturn::ACCEPTED;
+    return retval;
 }
 
 
 //A2D callback.  Takes in message from A2D, synchronizes with message from A2D, then calls UKF update
-void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg)
+GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+    std::shared_ptr<const ReportMultiBaselineRtkAttitude2D>&& pReport, const u8 streamId)
 {
+
+    int week, secOfWeek;
+    double fracSec, dtRX;
+    dtRX_=pReport->deltRSec();
+    pReport->tSolution.get(week, secOfWeek, fracSec);
+    double ttime=tgpsToSec(week,secOfWeek,fracSec) - dtRX;
     static int rCCalibCounter=0;
     static int calibSamples=20;
 
@@ -256,7 +273,7 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
 
     if(!rbiIsInitialized_ && msg->testStat>=100)
     {
-        const Eigen::Vector3d constrainedBaselineECEF(msg->rx,msg->ry,msg->rz);
+        const Eigen::Vector3d constrainedBaselineECEF(pReport->rx(), pReport->ry(), pReport->rz());
         const Eigen::Vector3d constrainedBaselineI(unit3(Rwrw_*Recef2enu_*constrainedBaselineECEF));
         rCtildeCalib_(rCCalibCounter%calibSamples,0)=constrainedBaselineI(0);
         rCtildeCalib_(rCCalibCounter%calibSamples,1)=constrainedBaselineI(1);
@@ -283,19 +300,16 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
         return;
     }
 
-
-    double ttime=tgpsToSec(msg->tSolution.week,msg->tSolution.secondsOfWeek,msg->tSolution.fractionOfSecond) - msg->deltRSec;
-
     //if everything is working
     if(ttime>lastA2Dtime_)  //Only use newest time. Ignore 0 messages.
     {
         hasAlreadyReceivedA2D_=true;
         lastA2Dtime_=ttime;
-        if(msg->testStat > minTestStat_)
+        if(pReport->testStat() > minTestStat_)
         {
             validA2Dtest_=true;
             //Store constrained baseline vector in I frame
-            const Eigen::Vector3d constrainedBaselineECEF(msg->rx,msg->ry,msg->rz);
+            const Eigen::Vector3d constrainedBaselineECEF(pReport->rx(), pReport->ry(), pReport->rz());
             rS2PMeas_ = Recef2wrw_*constrainedBaselineECEF;
             rS2PMeas_ = unit3(rS2PMeas_);
         }else
@@ -328,36 +342,48 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
         hasAlreadyReceivedRTK_=false; hasAlreadyReceivedA2D_=false;
         }
     }
+    retval = ProcessReportReturn::ACCEPTED;
+    return retval;    
 }
 
 
 //Checks navsol to get the most recent figures for dtRX
-void estimationNode::navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg)
+GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+    std::shared_ptr<const ReportNavigationSolution>&& pReport, const u8 streamId)
 {
-    dtRXinMeters_ = msg->deltatRxMeters;
+    dtRXinMeters_ = pReport->deltatRxMeters();
+    retval = ProcessReportReturn::ACCEPTED;
+    return retval; 
 }
 
 
 //Get reference RRT time and measurement offset time from Observables message
-void estimationNode::tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg)
+GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+    std::shared_ptr<const ReportObservablesMeasurementTime>&& pReport, const u8 streamId)
 {
-    if(msg->tOffset.week<1e-9)
-        {return;}
-    lynxHelper_.setTOffset(tgpsToSec(msg->tOffset.week,msg->tOffset.secondsOfWeek,msg->tOffset.fractionOfSecond));
+    int week, secOfWeek;
+    double fracSec;
+    pReport->tOffset.get(week, secOfWeek, fracSec);
+    double ttime=tgpsToSec(week,secOfWeek,fracSec);
+    lynxHelper_.setTOffset(ttime);
+    retval = ProcessReportReturn::ACCEPTED;
+    return retval; 
 }
 
 
 //Get upper 32 bits of tIndex counter
-void estimationNode::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg)
+GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+    std::shared_ptr<const ReportImuConfig>&& pReport, const u8 streamId)
 {
     ROS_INFO("Config message received.");
-    imuConfigAccel_ = msg->lsbToMetersPerSecSq; //scaling to m/s2 from "non-engineering units"
-    imuConfigAttRate_ = msg->lsbToRadPerSec; //scaling to rad/s from "non-engineering units"
-    //imuSampleFreq = msg->sampleFreqNumerator/msg->sampleFreqDenominator/36/3600;  //samples per second
+    imuConfigAccel_ = pReport->lsbToMetersPerSecSq(); //scaling to m/s2 from "non-engineering units"
+    imuConfigAttRate_ = pReport->lsbToRadPerSec(); //scaling to rad/s from "non-engineering units"
     
-    sampleFreqNum_ = msg->sampleFreqNumerator;
-    sampleFreqDen_ = msg->sampleFreqDenominator;
-    tIndexConfig_ = msg->tIndexk;
+    sampleFreqNum_ = pReport->sampleFreqNumerator();
+    sampleFreqDen_ = pReport->sampleFreqDenominator();
+    tIndexConfig_ - pReport->tIndexk();
+    retval = ProcessReportReturn::ACCEPTED;
+    return retval; 
 }
 
 
