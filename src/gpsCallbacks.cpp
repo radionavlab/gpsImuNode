@@ -371,7 +371,8 @@ void estimationNode::publishOdomAndMocap()
     Eigen::Matrix<double,15,1> xState;
     Eigen::Vector3d imuAccel,imuAttRate;
     double tlastImuPub;
-    imuFilterLynx_.getState(xState, RBI_);
+    //imuFilterLynx_.getState(xState, RBI_);
+    imuFilterSnap_.getState(xState, RBI_);
 
     nav_msgs::Odometry localOdom_msg;
 
