@@ -57,7 +57,7 @@ void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
 
     double tOffsetRosToUTC = tGPS - (ros::Time::now()).toSec();
     hasRosToUTC_=true;
-    snapHelper_.setTOffset(tOffsetRosToUTC);
+    lynxHelper_.setTOffset(tOffsetRosToUTC);
 
     //Run CF if calibrated
     if(isCalibratedLynx_)
