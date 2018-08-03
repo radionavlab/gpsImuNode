@@ -44,6 +44,8 @@ class gpsImu
         void getState(Eigen::Matrix<double,15,1> &state, Eigen::Matrix3d &RR)
             {state=xState_; RR=RBI_;}
 
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
 	private:
 	    Eigen::Vector3d Limu_, Ls2p_, Lcg2p_;
         

@@ -128,7 +128,7 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
                                                     this, ros::TransportHints().tcpNoDelay());
         a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
                                                     this, ros::TransportHints().tcpNoDelay());
-        imuSub_ = nh.subscribe("IMU",10, &estimationNode::imuDataCallback,
+        imuSub_ = nh.subscribe("IMU",10, &estimationNode::lynxImuCallback,
                                                     this, ros::TransportHints().tcpNoDelay());
         imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
                                                     this, ros::TransportHints().tcpNoDelay());
@@ -149,7 +149,7 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
                                                     this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
                                                     this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
-        imuSub_ = nh.subscribe("IMU",10, &estimationNode::imuDataCallback,
+        imuSub_ = nh.subscribe("IMU",10, &estimationNode::lynxImuCallback,
                                                     this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));
         imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
                                                     this, ros::TransportHints().unreliable().reliable().tcpNoDelay(true));

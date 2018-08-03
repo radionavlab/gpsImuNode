@@ -35,11 +35,13 @@ class estimationNode
     void singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg);
     void attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg);
     void imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg);
-    void imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg);
+    void lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg);
     void navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg);
     void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);
     void mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg);
     void publishOdomAndMocap();
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
  private:
     void PublishTransform(const geometry_msgs::Pose &pose,

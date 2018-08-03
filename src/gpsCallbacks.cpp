@@ -8,7 +8,7 @@ namespace gpsimu_odom
 {
 
 //Callback for imu subscriber for the lynx
-void estimationNode::imuDataCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
+void estimationNode::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
 {
     //Initialization variables
     static int counter=0;

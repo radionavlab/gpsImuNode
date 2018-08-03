@@ -14,6 +14,7 @@ class gpsTime
     	void getTime(double &wk, double &se, double &fSec){wk=week_;se=sec_;fSec=fracSec_;}
     	void setTime(const double wk, const double se, const double fSec){week_=wk;sec_=se;fracSec_=fSec;}
     	double toSec(){return (week_*604800.0+sec_+fracSec_);}
+    	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   	private:
     	double week_, sec_, fracSec_;
 };
@@ -31,6 +32,7 @@ class gpsMeas
 		void getMeas(double &t, Eigen::Vector3d &rP, Eigen::Vector3d &rC)
 			const {t=tSec_; rP=rPrimary_; rC=rS2P_;}
 		void getTime(double &t) const {t=tSec_;}
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 	private:
 		double tSec_;
 		Eigen::Vector3d rPrimary_, rS2P_;
@@ -46,7 +48,8 @@ class imuMeas
 			{tSec_=t; a_=aIn; wB_=wIn;};
 		void getMeas(double &t, Eigen::Vector3d &aOut, Eigen::Vector3d &wOut)
 			const {t=tSec_; aOut=a_; wOut=wB_;}
-		void getTime(double &t) const {t=tSec_;}	
+		void getTime(double &t) const {t=tSec_;}
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW	
 	private:
 		double tSec_;
 		Eigen::Vector3d a_, wB_;
