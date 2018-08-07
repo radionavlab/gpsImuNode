@@ -32,30 +32,36 @@ namespace po = boost::program_options;
 
 namespace gpsimu_odom
 {
+class GbxStreamEndpointGPSKF;
+
 class estimationNode
 {
  public:
     estimationNode(ros::NodeHandle &nh);
 
-    //ROS stuff
-    GbxStreamEndpoint::ProcessReportReturn processReport_(
-                std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId);
-    GbxStreamEndpoint::ProcessReportReturn processReport_(
-                std::shared_ptr<const ReportMultiBaselineRtkAttitude2D>&& pReport, const u8 streamId);
-    GbxStreamEndpoint::ProcessReportReturn processReport_(
-                std::shared_ptr<const ReportImu>&& pReport, const u8 streamId);
-    GbxStreamEndpoint::ProcessReportReturn processReport_(
-                std::shared_ptr<const ReportImuConfig>&& pReport, const u8 streamId);
-    GbxStreamEndpoint::ProcessReportReturn processReport_(
-                std::shared_ptr<const ReportNavigationSolution>&& pReport, const u8 streamId);
+    // ROS stuff
     void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);
     void mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg);
     void publishOdomAndMocap();
+
+    // Callbacks available for gbx
+    // Naming convention: "let" is for class objects which are acted upon by child class objects
+    void runGPS(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime); //foo
+    void letStreamRunGPS(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime);
+    void runLynxIMU(const Eigen::Vector3d accel, const Eigen::Vector3d attRate, const double ttime); //foo
+    void letStreamRunIMU(const Eigen::Vector3d accel, const Eigen::Vector3d attRate, const double ttime);
+    void setRBI(const Eigen::Matrix3d RBI){RBI_=RBI;}
+    void letStreamSetRBI0(const Eigen::Matrix3d RBI){
+        stream_ -> setRBI(setRBI0);}
+    // Modified from 
+    // https://stackoverflow.com/questions/16157976/calling-member-functions-on-a-parent-object
 
  private:
     void PublishTransform(const geometry_msgs::Pose &pose,
                                                 const std_msgs::Header &header,
                                                 const std::string &child_frame_id);
+
+    GbxStreamEndpointGPSKF* stream_;
 
     ros::Publisher localOdom_pub_, mocap_pub_;
     std::string child_frame_id_;

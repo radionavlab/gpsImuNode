@@ -9,6 +9,8 @@ namespace gpsimu_odom
 //Initializes all ROS work
 estimationNode::estimationNode(ros::NodeHandle &nh)
 {
+    // Pause GBX stream during initial reads
+    stream_ -> pauseStream();
 
     //Get data about node and topic to listen
     std::string quadPoseTopic, quadName, rtktopic, a2dtopic, posePubTopic, nodeNamespace;
@@ -24,6 +26,24 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     ros::param::get(quadName + "/posePubTopic", posePubTopic);
     ros::param::get(quadName + "/minimumTestStat",minTestStat_);
     ros::param::get(quadName + "/maxThrust",tmax);
+    int gbxport;
+    ros::param::get(quadName + "/gbxport",gbxport);
+    
+
+    //create GBX streams
+    auto epOutput = std::make_shared<GbxStreamEndpointGPSKF>();
+    epOutput->configure(nh, baseECEF_vector, Recef2enu);
+    //epOutput->donothing();
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::CODA);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::SINGLE_BASELINE_RTK);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::ATTITUDE_2D);
+    epOutput->filter(GbxStream::DEFAULT_PRIMARY).enableWhitelist();
+    //make endpoint
+    auto epInput = std::make_shared<GbxStreamEndpointIN>(port, OptionObject::protocol_enum::IP_UDP, OptionObject::peer_type_enum::ROVER);
+    gbxStream->resumeStream();
+    gbxStream->attachSinkEndpoint(epOutput);
+    gbxStream->attachSourceEndpoint(epInput);
+
 
     //Get additional parameters for the kalkman filter
     nh.param(quadName + "/publish_tf", publish_tf_, true);
