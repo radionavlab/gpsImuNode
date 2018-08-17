@@ -33,21 +33,6 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     twHelper.setWeight(0.75*9.81);
     twHelper.setTW0(1.75);
     twHelper.setTLastProc(ros::Time::now().toSec());
-    
-
-    //create GBX streams
-    auto epOutput = std::make_shared<GbxStreamEndpointGPSKF>();
-    epOutput->configure(nh, baseECEF_vector, Recef2enu);
-    //epOutput->donothing();
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::CODA);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::SINGLE_BASELINE_RTK);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::ATTITUDE_2D);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).enableWhitelist();
-    //make endpoint
-    auto epInput = std::make_shared<GbxStreamEndpointIN>(port, OptionObject::protocol_enum::IP_UDP, OptionObject::peer_type_enum::ROVER);
-    gbxStream->resumeStream();
-    gbxStream->attachSinkEndpoint(epOutput);
-    gbxStream->attachSourceEndpoint(epInput);
 
 
     //Get additional parameters for the kalkman filter
