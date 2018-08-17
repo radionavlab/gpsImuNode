@@ -28,6 +28,11 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     ros::param::get(quadName + "/maxThrust",tmax);
     int gbxport;
     ros::param::get(quadName + "/gbxport",gbxport);
+
+    //Initialize twHelper
+    twHelper.setWeight(0.75*9.81);
+    twHelper.setTW0(1.75);
+    twHelper.setTLastProc(ros::Time::now().toSec());
     
 
     //create GBX streams

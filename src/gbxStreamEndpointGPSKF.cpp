@@ -22,6 +22,14 @@ void GbxStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d base
     L_cg2p << 0.1013,-0.0004,0.0472;
 }
 
+
+void GbxStreamEndpointGPSKF::setRosPointer(std::shared_ptr<EstimationNode> rosHandle)
+{
+    rosHandle_=rosHandle;
+    hasRosHandle=true;
+    return;
+}
+
 void GbxStreamEndpointGPSKF::donothing()
 {
     std::cout << "Do nothing called" << std::endl;
@@ -94,7 +102,6 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             rbiIsInitialized_=true;
 
             doSetRBI0(RBI_);
-
         }
         return;
     }
@@ -125,7 +132,7 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
         if(isCalibratedLynx_ && dtLastProc>0)
         {
 
-            doGPStoNode(internalpose,rS2PMeas_,ttime);
+            runRosUKF(internalpose,rS2PMeas_,ttime);
         }
 
         //Reset to avoid publishing twice
@@ -161,6 +168,7 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
                 tmpvec(1) = pReport->ry() - zeroInECEF_(1);
                 tmpvec(2) = pReport->rz() - zeroInECEF_(2);
                 rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec;
+                doSetRprimary(rPrimaryMeas_); //sets rPrimaryMeas_ in estimationNode
             }else
             {
                 validRTKtest_=false;
@@ -176,7 +184,7 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             if(isCalibratedLynx_ && dtLastProc>0)
             {
 
-                doIGPStoNode(internalpose,rS2PMeas_,ttime);
+                runRosUKF(internalpose,rS2PMeas_,ttime);
 
             }
 
@@ -231,10 +239,18 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
 
 
 //The code is present here but has been disabled due to lynx vibrations
-/*//Callback for imu subscriber for the lynx
+//Callback for imu subscriber for the lynx
 GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
     std::shared_ptr<const ReportImu>&& pReport, const u8 streamId)
 {
+    //If reports are being received but the pointer to the ros node is not available, exit
+    if(~hasRosHandle)
+    {
+        retval = ProcessReportReturn::ACCEPTED;
+        return retval;         
+    }
+
+
     //Initialization variables
     static int counter=0;
     static uint64_t imuSeq=0;
@@ -282,7 +298,7 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
 
     double tOffsetRosToUTC = tGPS - (ros::Time::now()).toSec();
     hasRosToUTC_=true;
-    snapHelper_.setTOffset(tOffsetRosToUTC);
+    rosHandle_->lynxHelper_.setTOffset(tOffsetRosToUTC);
 
     //Run CF if calibrated
     if(isCalibratedLynx_)
@@ -294,16 +310,16 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             //Construct measurements
             const imuMeas thisImuMeas(thisTime,imuAccelMeas,imuAttRateMeas);
             lastImuMeasLynx_ = thisImuMeas; //Used for reporting wB in publishOdomAndMocap
-            lynxHelper_.setLastImuMeas(thisImuMeas);
+            rosHandle_->lynxHelper_.setLastImuMeas(thisImuMeas);
 
-            imuFilterLynx_.runUKFpropagateOnly(tLastProcessed,thisImuMeas);
+            rosHandle_->imuFilterLynx_.runUKFpropagateOnly(tLastProcessed,thisImuMeas);
 
             //Publish
             updateType = "imu"; publishOdomAndMocap();
             //RBI_ is updated when publisher is called.
 
             //Cleanup
-            lynxHelper_.setTLastProc(thisTime);
+            rosHandle_->lynxHelper_.setTLastProc(thisTime);
 
             //Warn if signal is lost
             if( (thisTime-lastRTKtime_ > 0.5) || (thisTime-lastA2Dtime_ > 0.5) )
@@ -330,11 +346,34 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             Eigen::Matrix<double,15,1> xState;
             xState<<rI0(0),rI0(1),rI0(2), 0,0,0, 0,0,0, ba0Lynx(0),ba0Lynx(1),ba0Lynx(2), bg0Lynx(0),bg0Lynx(1),bg0Lynx(2);
             isCalibratedLynx_ = true;
-            lynxHelper_.setTLastProc(thisTime);
-            imuFilterLynx_.setState(xState,RBI_);
+            rosHandle_->lynxHelper_.setTLastProc(thisTime);
+            rosHandle_->imuFilterLynx_.setState(xState,RBI_);
         }
     }
     retval = ProcessReportReturn::ACCEPTED;
     return retval; 
-}*/
+}
+
+
+void GbxStreamEndpointGPSKF::runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime)
+{
+    rosHandle_->letStreamRunGPS(pose, Ls2p, ttime);
+}
+
+
+void GbxStreamEndpointGPSKF::runRosUKFPropagate(const Eigen::Vector3d acc, const Eigen::Vector3d att, const double ttime)
+{
+    rosHandle_->letStreamRunGPS(acc, att, ttime);
+}
+
+
+void GbxStreamEndpointGPSKF::doSetRBI0(const Eigen::Matrix3d &RBI0)
+{
+    rosHandle_->letStreamSetRBI(RBI0);
+}
+
+void GbxStreamEndpointGPSKF::doSetRprimary(const Eigen::Vector3d &rp)
+{
+    rosHandle_->letStreamSetRprimary(rp);
+}
 

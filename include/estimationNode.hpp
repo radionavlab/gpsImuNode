@@ -25,23 +25,23 @@
 #include "constants.hpp"
 
 //gbx includes
-#include "gbxstreamendpointin.h"
-#include "gbxstream.h"
-#include <boost/program_options.hpp>
+//#include "gbxstreamendpointin.h"
+//#include "gbxstream.h"
+//#include <boost/program_options.hpp>
 namespace po = boost::program_options;
+
+class GbxStreamEndpointGPSKF;
 
 namespace gpsimu_odom
 {
-class GbxStreamEndpointGPSKF;
-
 class estimationNode
 {
  public:
     estimationNode(ros::NodeHandle &nh);
 
     // ROS stuff
-    void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);
     void mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg);
+    void throttleCallback(const std_msgs::Float64::ConstPtr &msg);    
     void publishOdomAndMocap();
 
     // Callbacks available for gbx
@@ -56,6 +56,8 @@ class estimationNode
     // Modified from 
     // https://stackoverflow.com/questions/16157976/calling-member-functions-on-a-parent-object
 
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
  private:
     void PublishTransform(const geometry_msgs::Pose &pose,
                                                 const std_msgs::Header &header,
@@ -68,6 +70,9 @@ class estimationNode
     gpsImu imuFilterLynx_, imuFilterSnap_;
     filterHelper lynxHelper_, snapHelper_;
     imuMeas lastImuMeasLynx_;
+    bool hasRosHandle;
+    kalmanTW twFilter_;
+    twHelper twHelper_;
 
     tf2_ros::TransformBroadcaster tf_broadcaster_;
 

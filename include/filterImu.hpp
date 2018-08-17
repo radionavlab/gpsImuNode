@@ -37,12 +37,15 @@ class gpsImu
             {xState_=xIn; RBI_=RR;}
         void setBiasSaturationLimits(const double baIn, const double bgIn) {maxBa_=baIn; maxBg_=bgIn;}
 
-        //Getters
+        //Getters. Varying for efficiency
         void getCovariance(Eigen::Matrix<double,15,15> &Pout) {Pout=Pimu_;}
         void getState(Eigen::Vector3d &pos, Eigen::Vector3d &vel, Eigen::Matrix3d &RR)
             {pos=xState_.topRows(3); vel=xState_.middleRows(3,3); RR=RBI_;}
         void getState(Eigen::Matrix<double,15,1> &state, Eigen::Matrix3d &RR)
             {state=xState_; RR=RBI_;}
+        void getRBI(Eigen::Matrix3d &RR) {RR=RBI_;}
+        void getXstate(Eigen::Matrix<double,15,1> &xin) {xin = xState_;}
+        Eigen::Vector3d getPos() {return xState_.topRows(3);}
 
 	private:
 	    Eigen::Vector3d Limu_, Ls2p_, Lcg2p_;

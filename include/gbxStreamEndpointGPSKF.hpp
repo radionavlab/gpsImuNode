@@ -7,17 +7,19 @@
 #include <ros/ros.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+namespace po = boost::program_options;
 
-class GbxStreamEndpointGPSKF : public GbxStreamEndpoint
+class estimationNode;
+
+class GbxStreamEndpointGPSKF
 {
 public:
-    GbxStreamEndpointGPSKF(estimationNode& world) : w(world) {
+    GbxStreamEndpointGPSKF() {
         hasAlreadyReceivedA2D=false;
         hasAlreadyReceivedRTK=false;
         gpsSec_=0;
         gpsWeek_=0;
         gpsFracSec_=0;
-        L_cg2p << 0.1013, -0.0004, 0.0472;
     }
 
     // More useful functions
@@ -25,17 +27,10 @@ public:
     void configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
             Eigen::Matrix3d Recef2enu_in);
     void donothing(); //compiler test
-
-    // Naming convention: "do" is for class objects which act on parent class objects
-    void doIMUtoNode(const Eigen::Vector3d rp, const Eigen::Vector3d rs2p, const double t) {
-        w.letStreamRunImu(rp, rs2p, t);
-    }
-    void doGPStoNode(const Eigen::Vector3d accel, const Eigen::Vector3d attRate, const double t) {
-        w.letStreamRunGps(accel, attRate, ttime);
-    }
-    void doSetRBI0(const Eigen::Matrix3d RBI){
-        w.letStreamSetRBI0(RBI);
-    }
+    void setRosPointer(std::shared_ptr<EstimationNode> rosHandle);
+    void runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime);
+    void doSetRBI0(const Eigen::Matrix3d &RBI0);
+    void doSetRprimary(const Eigen::Vector3d &rp);
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -60,7 +55,7 @@ protected:
     virtual GbxStreamEndpoint::ProcessReportReturn processReport_(
                 std::shared_ptr<const ReportNavigationSolution>&& pReport, const u8 streamId);
 private:
-    estimationNode& w;
+    std::shared_ptr<EstimationNode> rosHandle_;
     bool validRTKtest, validA2Dtest, hasAlreadyReceivedA2D, hasAlreadyReceivedRTK;
     int gpsWeek_, gpsSec_, internalSeq, sec_in_week;;
     double gpsFracSec_, dtRX_, minTestStat, lastRTKtime, lastA2Dtime;

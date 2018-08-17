@@ -9,6 +9,7 @@
 class gpsTime
 {
   	public:
+  		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     	gpsTime(){week_=0.0;sec_=0.0;fracSec_=0.0;}
     	gpsTime(const double wk, const double se, const double fSec){week_=wk;sec_=se;fracSec_=fSec;}
     	void getTime(double &wk, double &se, double &fSec){wk=week_;se=sec_;fSec=fracSec_;}
@@ -23,6 +24,7 @@ class gpsTime
 class gpsMeas
 {
 	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 		gpsMeas() {tSec_=0.0; rPrimary_=Eigen::Vector3d::Zero(); rS2P_=Eigen::Vector3d::Zero();}
 		gpsMeas(const double t, const Eigen::Vector3d &rP, const Eigen::Vector3d &rC)
 			{tSec_=t; rPrimary_=rP; rS2P_=rC;};
@@ -39,6 +41,7 @@ class gpsMeas
 class imuMeas
 {
 	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 		imuMeas(){tSec_=0.0; a_=Eigen::Vector3d::Zero(); wB_=Eigen::Vector3d::Zero();}
 		imuMeas(const double t, const Eigen::Vector3d &aa, const Eigen::Vector3d &ww)
 			{tSec_=t; a_=aa; wB_=ww;};
@@ -56,6 +59,7 @@ class imuMeas
 class filterHelper
 {
 	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 		filterHelper() {tOffsetSec_=0.0; tLastProc_=0.0;}
 		void setTOffset(const double t) {tOffsetSec_ = t;}
 		void setTLastProc(const double t) {tLastProc_ = t;}
@@ -66,5 +70,23 @@ class filterHelper
 	private:
 		double tOffsetSec_, tLastProc_;
 		imuMeas lastImuMeas_;
+};
+
+
+class twHelper
+{
+	public:
+		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+		twHelper() {tLastProc_=0;weight_=0;}
+		void setTW0(const double tw0) {tw0_=tw0;}
+		void setWeight(const double t) {tOffsetSec_ = t;}
+		void setTLastProc(const double t) {tLastProc_ = t;}
+		void setLastCommand(const double lc) {lastCommand_=lc;}
+		double getLastCommand() const{return lastCommand_;}
+		double getWeight() const {return weight_;}
+		double getBaseForce() const {return weight_*tw0_;}
+	private:
+		double weight_, tLastProc_, lastCommand_;
+		//norm(u)=weight_*TW*lastCommand_;
 };
 
