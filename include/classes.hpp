@@ -77,16 +77,16 @@ class twHelper
 {
 	public:
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-		twHelper() {tLastProc_=0;weight_=0;}
+		twHelper() {tLastProc_=0.0;weight_=0.0;tw0_=0.0;}
 		void setTW0(const double tw0) {tw0_=tw0;}
-		void setWeight(const double t) {tOffsetSec_ = t;}
+		void setWeight(const double t) {weight_ = t;}
 		void setTLastProc(const double t) {tLastProc_ = t;}
 		void setLastCommand(const double lc) {lastCommand_=lc;}
 		double getLastCommand() const{return lastCommand_;}
 		double getWeight() const {return weight_;}
 		double getBaseForce() const {return weight_*tw0_;}
 	private:
-		double weight_, tLastProc_, lastCommand_;
+		double weight_, tLastProc_, lastCommand_, tw0_;
 		//norm(u)=weight_*TW*lastCommand_;
 };
 

@@ -9,10 +9,7 @@ namespace gpsimu_odom
 //Initializes all ROS work
 estimationNode::estimationNode(ros::NodeHandle &nh)
 {
-    // Pause GBX stream during initial reads
-    stream_ -> pauseStream();
-
-    //Get data about node and topic to listen
+   //Get data about node and topic to listen
     std::string quadPoseTopic, quadName, rtktopic, a2dtopic, posePubTopic, nodeNamespace;
     double tmax;
     quadName = ros::this_node::getName();
@@ -30,10 +27,9 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     ros::param::get(quadName + "/gbxport",gbxport);
 
     //Initialize twHelper
-    twHelper.setWeight(0.75*9.81);
-    twHelper.setTW0(1.75);
-    twHelper.setTLastProc(ros::Time::now().toSec());
-
+    twHelper_.setWeight(0.75*9.81);
+    twHelper_.setTW0(1.75);
+    twHelper_.setTLastProc(ros::Time::now().toSec());
 
     //Get additional parameters for the kalkman filter
     nh.param(quadName + "/publish_tf", publish_tf_, true);
@@ -125,25 +121,6 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     // Initialize publishers and subscribers
     bool useUDPinsteadOfTCP = false; //false by default
     ros::param::get(quadName + "/useUDP",useUDPinsteadOfTCP);
-
-    dtRosToGps_=0.0; //used in playback to align ros::Time::now() and GPS time. ==0 in gbx realtime mode
-
-    //GBX stuff
-    auto gbxStream = std::make_shared<GbxStream>();
-    gbxStream->pauseStream();
-    auto epOutput = std::make_shared<GbxStreamEndpointGPSKF>();
-    // Add any other necessary reports here.
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::SINGLE_BASELINE_RTK);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::ATTITUDE_2D);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::IMU);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::IMU_CONFIG);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::NAVIGATION_SOLUTION);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::OBSERVABLES_MEASUREMENT_TIME);
-    epOutput->filter(GbxStream::DEFAULT_PRIMARY).enableWhitelist();
-    //make endpoint
-    auto epInput = std::make_shared<GbxStreamEndpointIN>(port, OptionObject::protocol_enum::IP_UDP, OptionObject::peer_type_enum::ROVER);
-    gbxStream->resumeStream();    
-
 
     //Create pubs/subs as TCP/UDP
     if(~useUDPinsteadOfTCP)  //if using TCP/IP

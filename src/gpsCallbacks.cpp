@@ -16,8 +16,11 @@ namespace gpsimu_odom
 //update
 void estimationNode::throttleCallback(const std_msgs::Float64::ConstPtr &msg)
 {
+    Eigen::Matrix<double,15,1> state;
+    imuFilterSnap_.getState(state);
+    double xCurr=state(2);
     //if on the ground / else if taken off
-    if(xCurr(2)<0.05)
+    if(xCurr<0.05)
     {
     throttleSetpoint = 9.81/throttleMax; //the floor is the throttle
     }else{

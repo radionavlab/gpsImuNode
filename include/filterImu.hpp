@@ -44,7 +44,7 @@ class gpsImu
         void getState(Eigen::Matrix<double,15,1> &state, Eigen::Matrix3d &RR)
             {state=xState_; RR=RBI_;}
         void getRBI(Eigen::Matrix3d &RR) {RR=RBI_;}
-        void getXstate(Eigen::Matrix<double,15,1> &xin) {xin = xState_;}
+        void getState(Eigen::Matrix<double,15,1> &xin) {xin = xState_;}
         Eigen::Vector3d getPos() {return xState_.topRows(3);}
 
 	private:

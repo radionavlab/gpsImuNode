@@ -11,7 +11,7 @@ Eigen::Matrix3d ecef2enu_rotMatrix(Eigen::Vector3d &ECEF){
     const double bb = 6356752.3142518;
     const double ee = 0.0818191908334158;
     const double ep = sqrt((aa*aa - bb*bb)/(bb*bb));
-	const double ee2 = (aa*aa-bb*bb)/(aa*aa);
+    const double ee2 = (aa*aa-bb*bb)/(aa*aa);
 
     //Convert to (phi,lambda,h) geodetic coordinates
     double x = ECEF(0);

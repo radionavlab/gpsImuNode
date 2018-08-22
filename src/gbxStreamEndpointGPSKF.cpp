@@ -3,6 +3,16 @@
 #include <sys/time.h>
 #include "mathHelperFunctions.hpp"
 
+
+GbxStreamEndpointGPSKF::GbxStreamEndpointGPSKF()
+{
+        hasAlreadyReceivedA2D=false;
+        hasAlreadyReceivedRTK=false;
+        gpsSec_=0;
+        gpsWeek_=0;
+        gpsFracSec_=0;
+}
+
 GbxStreamEndpointGPSKF::~GbxStreamEndpointGPSKF() {
   closeSinkStream_();
 }
@@ -23,7 +33,7 @@ void GbxStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d base
 }
 
 
-void GbxStreamEndpointGPSKF::setRosPointer(std::shared_ptr<EstimationNode> rosHandle)
+void GbxStreamEndpointGPSKF::setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle)
 {
     rosHandle_=rosHandle;
     hasRosHandle=true;

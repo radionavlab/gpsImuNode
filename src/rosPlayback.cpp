@@ -30,7 +30,7 @@ void rosStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d base
 }
 
 
-void rosStreamEndpointGPSKF::setRosPointer(std::shared_ptr<EstimationNode> rosHandle)
+void rosStreamEndpointGPSKF::setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle)
 {
     rosHandle_=rosHandle;
     hasRosHandle=true;

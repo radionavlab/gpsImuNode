@@ -4,6 +4,7 @@
 #include "rosPlayback.hpp"
 #include <string>
 #include <iostream>
+#include "mathHelperFunctions.hpp"
 
 const char strSIGTERM[] = "SIGTERM";
 const char strSIGINT[] = "SIGINT";
@@ -41,6 +42,8 @@ int main(int argc, char **argv)
     auto gpsimu = std::make_shared<gpsimu_odom::estimationNode>(nh);
     ros::spin();
 
+    std::string quadName = ros::this_node::getName();
+
     //Determine whether to create a GBXStream or a ROSStream
     bool runViaPostProcessedRosbag;
     ros::param::get(quadName + "/runViaRosbag", runViaPostProcessedRosbag);
@@ -50,7 +53,7 @@ int main(int argc, char **argv)
     ros::param::get(quadName + "/arenaCenterX", baseECEF_vector(0));
     ros::param::get(quadName + "/arenaCenterY", baseECEF_vector(1));
     ros::param::get(quadName + "/arenaCenterZ", baseECEF_vector(2));
-    Eigen::Matrix3d Recef2enu = ecef2enu_rotMatrix(baseECEF_vector);
+    Eigen::Matrix3d Recef2enu = gpsimu_odom::ecef2enu_rotMatrix(baseECEF_vector);
 
     if(~runViaPostProcessedRosbag)
     {
@@ -63,7 +66,7 @@ int main(int argc, char **argv)
         auto gbxStream = std::make_shared<GbxStream>();
         gbxStream->pauseStream();
 
-        int port = gbxport;
+        int port=gbxport;
         auto epOutput = std::make_shared<GbxStreamEndpointGPSKF>();
         epOutput->configure(nh, baseECEF_vector, Recef2enu);
         epOutput->setRosPointer(gpsimu);

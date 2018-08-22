@@ -18,6 +18,7 @@
 #include <cmath>
 #include <string>
 #include <iostream>
+#include "filterTW.hpp"
 
 #include "classes.hpp" //Included in filterImu.hpp
 #include "filterImu.hpp"
@@ -28,9 +29,6 @@
 //#include "gbxstreamendpointin.h"
 //#include "gbxstream.h"
 //#include <boost/program_options.hpp>
-namespace po = boost::program_options;
-
-class GbxStreamEndpointGPSKF;
 
 namespace gpsimu_odom
 {
@@ -51,9 +49,7 @@ class estimationNode
     void runLynxIMU(const Eigen::Vector3d accel, const Eigen::Vector3d attRate, const double ttime); //foo
     void letStreamRunIMU(const Eigen::Vector3d accel, const Eigen::Vector3d attRate, const double ttime);
     void setRBI(const Eigen::Matrix3d RBI){RBI_=RBI;}
-    void letStreamSetRBI0(const Eigen::Matrix3d RBI){
-        stream_ -> setRBI(setRBI0);}
-    void estimationNode::letStreamSetDTGPS(const double dt);
+    void letStreamSetDTGPS(const double dt);
     // Modified from 
     // https://stackoverflow.com/questions/16157976/calling-member-functions-on-a-parent-object
 
@@ -64,15 +60,13 @@ class estimationNode
                                                 const std_msgs::Header &header,
                                                 const std::string &child_frame_id);
 
-    GbxStreamEndpointGPSKF* stream_;
-
     ros::Publisher localOdom_pub_, mocap_pub_;
     std::string child_frame_id_;
     gpsImu imuFilterLynx_, imuFilterSnap_;
     filterHelper lynxHelper_, snapHelper_;
     imuMeas lastImuMeasLynx_;
     bool hasRosHandle;
-    kalmanTW twFilter_;
+    KalmanTW twFilter_;
     twHelper twHelper_;
 
     tf2_ros::TransformBroadcaster tf_broadcaster_;

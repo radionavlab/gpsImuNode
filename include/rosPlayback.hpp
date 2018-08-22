@@ -1,6 +1,5 @@
 #pragma once
 
-#include "rosStreamendpoint.h"
 #include "typedefs.h"
 #include "report.h"
 #include <Eigen/Geometry>
@@ -12,7 +11,7 @@
 #include <gbx_ros_bridge_msgs/NavigationSolution.h>
 #include <gbx_ros_bridge_msgs/ObservablesMeasurementTime.h>
 
-class estimationNode;
+class gpsimu_odom::estimationNode;
 
 class rosStreamEndpointGPSKF
 {
@@ -35,7 +34,7 @@ public:
     void lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg);
     void navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg);
     void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);    
-    void setRosPointer(std::shared_ptr<EstimationNode> rosHandle);
+    void setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle);
     void runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime);
 
     void doSetRBI0(const Eigen::Matrix3d &RBI0);
@@ -44,7 +43,7 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
-    std::shared_ptr<EstimationNode> rosHandle_;
+    std::shared_ptr<gpsimu_odom::estimationNode> rosHandle_;
     bool validRTKtest, validA2Dtest, hasAlreadyReceivedA2D, hasAlreadyReceivedRTK;
     int gpsWeek_, gpsSec_, internalSeq, sec_in_week;;
     double gpsFracSec_, dtRX_, minTestStat, lastRTKtime, lastA2Dtime;
@@ -54,7 +53,6 @@ private:
 
     // TO-DO: CLEAN UP DUPLICATES LATER
     std::string child_frame_id_;
-    gpsImu imuFilterLynx_, imuFilterSnap_;
     filterHelper lynxHelper_;
     imuMeas lastImuMeasLynx_;
 
@@ -66,13 +64,12 @@ private:
 
     ros::Subscriber gps_sub_, rtkSub_, a2dSub_, imuSub_, imuConfigSub_, tOffsetSub_, navSub_;
 
-    int internalSeq;
     double lastRTKtime_, lastA2Dtime_, minTestStat_, imuConfigAccel_, imuConfigAttRate_, tOffsetRosToUTC_,
         pi, sec_in_week_, dtRXinMeters_;
-    bool validRTKtest_, validA2Dtest_, hasAlreadyReceivedA2D_, hasAlreadyReceivedRTK_, rbiIsInitialized_,
-        isCalibratedLynx_, isCalibratedSnap_, publish_tf_, hasRosToUTC_;
-
+    bool rbiIsInitialized_, isCalibratedLynx_, isCalibratedSnap_, publish_tf_, hasRosToUTC_;
     long long int tIndexConfig_;
     uint64_t sampleFreqNum_, sampleFreqDen_;
 
 };
+
+
