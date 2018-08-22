@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(gps_imu)
+project(gbx_imu)
 
 #NOTE: Eigen includes are different in the snapdragon and odroid.  Snap uses Eigen includes, Odroid uses Eigen3 includes.
 
@@ -34,14 +34,6 @@ find_package(Eigen REQUIRED)
 #    DEPENDS Eigen
 #)
 
-#generate_messages(
-#  DEPENDENCIES
-#  std_msgs
-#  geometry_msgs
-#  gbx_ros_bridge_msgs
-#  nav_msgs
-#)
-
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
@@ -52,12 +44,12 @@ include_directories(
 
 catkin_package(
     INCLUDE_DIRS include
-    CATKIN_DEPENDS std_msgs geometry_msgs message_runtime gbx_ros_bridge_msgs)
+    CATKIN_DEPENDS std_msgs geometry_msgs gbx_ros_bridge_msgs)
 
 add_executable(gpsImu_node src/main.cpp src/estimationNode.cpp src/gpsCallbacks.cpp src/filterImu.cpp
     src/filterTW.cpp src/mathHelperFunctions.cpp src/gbxStreamEndpointGPSKF.cpp src/rosPlayback.cpp)
 
-target_link_libraries(gpskf_gbx 
+target_link_libraries(gpsImu_node 
   SharedPpEngine
   Threads::Threads
   ${catkin_LIBRARIES}
@@ -67,8 +59,8 @@ target_link_libraries(gpskf_gbx
   )
 #target_link_libraries(gpsImu_node Eigen3::Eigen)
 
-set_property(TARGET gpskf_gbx PROPERTY CXX_STANDARD 11)
-set_property(TARGET gpskf_gbx PROPERTY CXX_STANDARD_REQUIRED ON)
+set_property(TARGET gpsImu_node PROPERTY CXX_STANDARD 11)
+set_property(TARGET gpsImu_node PROPERTY CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 install(FILES

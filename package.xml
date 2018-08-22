@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>gps_imu</name>
+  <name>gbx_imu</name>
   <version>0.0.0</version>
   <description>The gps_imu package for IMU integration with ROS</description>
 
