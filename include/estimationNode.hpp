@@ -53,6 +53,7 @@ class estimationNode
     void setRBI(const Eigen::Matrix3d RBI){RBI_=RBI;}
     void letStreamSetRBI0(const Eigen::Matrix3d RBI){
         stream_ -> setRBI(setRBI0);}
+    void estimationNode::letStreamSetDTGPS(const double dt);
     // Modified from 
     // https://stackoverflow.com/questions/16157976/calling-member-functions-on-a-parent-object
 

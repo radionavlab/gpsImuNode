@@ -189,6 +189,13 @@ void estimationNode::letStreamSetRprimary(const Eigen::Vector3d &rp)
 }
 
 
+void estimationNode::letStreamSetDTGPS(const double dt)
+{
+    snapHelper_.setTOffset(dt);
+    return;
+}
+
+
 //Publish local_odom and mavros mocap.  Called whenever a measurement is processed
 void estimationNode::publishOdomAndMocap()
 {

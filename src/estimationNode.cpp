@@ -126,6 +126,7 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     bool useUDPinsteadOfTCP = false; //false by default
     ros::param::get(quadName + "/useUDP",useUDPinsteadOfTCP);
 
+    dtRosToGps_=0.0; //used in playback to align ros::Time::now() and GPS time. ==0 in gbx realtime mode
 
     //GBX stuff
     auto gbxStream = std::make_shared<GbxStream>();

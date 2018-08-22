@@ -55,7 +55,7 @@ catkin_package(
     CATKIN_DEPENDS std_msgs geometry_msgs message_runtime gbx_ros_bridge_msgs)
 
 add_executable(gpsImu_node src/main.cpp src/estimationNode.cpp src/gpsCallbacks.cpp src/filterImu.cpp
-    src/filterTW.cpp src/mathHelperFunctions.cpp src/gbxStreamEndpointGPSKF.cpp)
+    src/filterTW.cpp src/mathHelperFunctions.cpp src/gbxStreamEndpointGPSKF.cpp src/rosPlayback.cpp)
 
 target_link_libraries(gpskf_gbx 
   SharedPpEngine
