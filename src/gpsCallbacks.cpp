@@ -19,18 +19,19 @@ void estimationNode::throttleCallback(const std_msgs::Float64::ConstPtr &msg)
     Eigen::Matrix<double,15,1> state;
     imuFilterSnap_.getState(state);
     double xCurr=state(2);
+    double throttleSetpoint(0.0);
     //if on the ground / else if taken off
     if(xCurr<0.05)
     {
-    throttleSetpoint = 9.81/throttleMax; //the floor is the throttle
+      throttleSetpoint = 9.81/throttleMax_; //the floor is the throttle
     }else{
-    throttleSetpoint = throttleMax * msg->data;
+      throttleSetpoint = throttleMax_ * msg->data;
     }
     double u0 = twHelper.getBaseForce();
-    u0=u0*msg->data;
-    twHelper.setLastCommand(u0);
-    kalmanTW.processUpdate(ros::Time::now().toSec()-twHelper.getTLastProc(), imuFilterSnap_.getRBI().transpose(), u0);
-    twHelper.setTLastProc(ros::Time::now());
+    u0=u0*throttleSetpoint;
+    twHelper_.setLastCommand(u0);
+    kalmanTW_.processUpdate(ros::Time::now().toSec()-twHelper.getTLastProc(), imuFilterSnap_.getRBI().transpose(), u0);
+    twHelper_.setTLastProc(ros::Time::now());
 }
 
 

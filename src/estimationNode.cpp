@@ -12,6 +12,7 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
    //Get data about node and topic to listen
     std::string quadPoseTopic, quadName, rtktopic, a2dtopic, posePubTopic, nodeNamespace;
     double tmax;
+    int gbxport;
     quadName = ros::this_node::getName();
     nodeNamespace = ros::this_node::getNamespace();    
     ros::param::get(quadName + "/quadPoseTopic", quadPoseTopic);
@@ -22,8 +23,9 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     ros::param::get(quadName + "/a2dtopic", a2dtopic);
     ros::param::get(quadName + "/posePubTopic", posePubTopic);
     ros::param::get(quadName + "/minimumTestStat",minTestStat_);
-    ros::param::get(quadName + "/maxThrust",tmax);
-    int gbxport;
+    ros::param::get(quadName + "/maxThrust",throttleMax_);
+    ros::param::get(quadName + "/runLynx",LYNX_IMU);
+    ros::param::get(quadName + "/runSnap",SNAP_IMU);
     ros::param::get(quadName + "/gbxport",gbxport);
 
     //Initialize twHelper

@@ -79,9 +79,9 @@ class estimationNode
 
     int internalSeq;
     double lastRTKtime_, lastA2Dtime_, minTestStat_, imuConfigAccel_, imuConfigAttRate_, tOffsetRosToUTC_,
-        pi, sec_in_week_, dtRXinMeters_;
+        pi, sec_in_week_, dtRXinMeters_, throttleMax_;
     bool validRTKtest_, validA2Dtest_, hasAlreadyReceivedA2D_, hasAlreadyReceivedRTK_, rbiIsInitialized_,
-        isCalibratedLynx_, isCalibratedSnap_, publish_tf_, hasRosToUTC_;
+        isCalibratedLynx_, isCalibratedSnap_, publish_tf_, hasRosToUTC_, LYNX_IMU, SNAP_IMU;
 
     long long int tIndexConfig_;
     uint64_t sampleFreqNum_, sampleFreqDen_;
