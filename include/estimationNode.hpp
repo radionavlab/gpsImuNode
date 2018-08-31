@@ -20,7 +20,6 @@
 #include <iostream>
 #include "filterTW.hpp"
 
-#include "classes.hpp" //Included in filterImu.hpp
 #include "filterImu.hpp"
 #include "mathHelperFunctions.hpp"
 #include "constants.hpp"
@@ -50,6 +49,9 @@ class estimationNode
     void letStreamRunIMU(const Eigen::Vector3d accel, const Eigen::Vector3d attRate, const double ttime);
     void setRBI(const Eigen::Matrix3d RBI){RBI_=RBI;}
     void letStreamSetDTGPS(const double dt);
+    void letStreamSetRBI(const Eigen::Matrix3d &RBI0);
+    void letStreamSetRprimary(const Eigen::Vector3d &rp);
+    double getCurrentTime();
     // Modified from 
     // https://stackoverflow.com/questions/16157976/calling-member-functions-on-a-parent-object
 
@@ -66,7 +68,7 @@ class estimationNode
     filterHelper lynxHelper_, snapHelper_;
     imuMeas lastImuMeasLynx_;
     bool hasRosHandle;
-    KalmanTW twFilter_;
+    KalmanTW kalmanTW_;
     twHelper twHelper_;
 
     tf2_ros::TransformBroadcaster tf_broadcaster_;

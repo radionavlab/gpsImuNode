@@ -35,6 +35,7 @@ class gpsImu
             {tauG_=tauG_in; tauA_=tauA_in;}
         void setState(const Eigen::Matrix<double,15,1> xIn, const Eigen::Matrix3d &RR)
             {xState_=xIn; RBI_=RR;}
+        void setRBI(const Eigen::Matrix3d &RR) {RBI_=RR;}
         void setBiasSaturationLimits(const double baIn, const double bgIn) {maxBa_=baIn; maxBg_=bgIn;}
 
         //Getters. Varying for efficiency

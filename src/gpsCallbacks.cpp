@@ -27,11 +27,15 @@ void estimationNode::throttleCallback(const std_msgs::Float64::ConstPtr &msg)
     }else{
       throttleSetpoint = throttleMax_ * msg->data;
     }
-    double u0 = twHelper.getBaseForce();
+    double u0 = twHelper_.getBaseForce();
     u0=u0*throttleSetpoint;
     twHelper_.setLastCommand(u0);
-    kalmanTW_.processUpdate(ros::Time::now().toSec()-twHelper.getTLastProc(), imuFilterSnap_.getRBI().transpose(), u0);
-    twHelper_.setTLastProc(ros::Time::now());
+    Eigen::Matrix3d rbiTemp;
+    imuFilterSnap_.getRBI(rbiTemp);
+    rbiTemp=rbiTemp.transpose();
+    double tcurr=getCurrentTime();
+    kalmanTW_.processUpdate(tcurr-twHelper_.getTLastProc(), rbiTemp, u0);
+    twHelper_.setTLastProc(tcurr);
 }
 
 
@@ -99,10 +103,13 @@ void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
             runTWKF(imuFilterSnap_.getState());
 
             //update TW filter
-            kalmanTW.processUpdate(ros::Time::now().toSec()-twHelper.getTLastProc(), imuFilterSnap_.getRBI().transpose(),
-                twHelper.getLastCommand());
-            kalmanTW.measurementUpdate(imuFilterSnap_.getPos());
-            twHelper.setTLastProc(ros::Time::now());
+            Eigen::Matrix3d rbiTemp;
+            imuFilterSnap_.getRBI(rbiTemp);
+            rbiTemp=rbiTemp.transpose();
+            double tcurr=getCurrentTime();
+            kalmanTW_.processUpdate(tcurr-twHelper_.getTLastProc(), rbiTemp, twHelper_.getLastCommand());
+            kalmanTW_.measurementUpdate(imuFilterSnap_.getPos());
+            twHelper_.setTLastProc(tcurr);
         }
     }else if(rbiIsInitialized_)  //if RBI has been calculated but the biases have not been calculated
     { 
@@ -123,14 +130,14 @@ void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
             //initialize TW filter with same initial state
             Eigen::Matrix<double,7,7> P0=0.01*Eigen::Matrix<double,7,7>::Identity();
             P0(6,6)=0.1;
-            Eigen::Matrix<double,7,1> x0=Eigen::Matrix<double,7,1,>::Zero();
+            Eigen::Matrix<double,7,1> x0=Eigen::Matrix<double,7,1>::Zero();
             x0.topRows(3)=xState.topRows(3);
             x0(6)=1;
             Eigen::Matrix<double,4,4> Q=0.1*Eigen::Matrix<double,4,4>::Identity();
             Q(3,3)=0.01;
             Eigen::Matrix3d R = 0.01*Eigen::Matrix3d::Identity();
-            twFilter.initialize(x0,P0,Q,R);
-            twHelper.setTLastProc(ros::Time::now().toSec);
+            kalmanTW_.initialize(x0,P0,Q,R);
+            twHelper_.setTLastProc((ros::Time::now()).toSec());
         }
     }
 }
@@ -151,10 +158,13 @@ void estimationNode::letStreamRunGPS(const Eigen::Vector3d pose, const Eigen::Ve
     {   
         imuFilterSnap_.runUKF(snapHelper_.getLastImuMeas(),thisGpsMeas);
         snapHelper_.setTLastProc(ttime);
-        kalmanTW.processUpdate(ros::Time::now().toSec()-twHelper.getTLastProc(), imuFilterSnap_.getRBI().transpose(),
-            twHelper.getLastCommand());
-        kalmanTW.measurementUpdate(imuFilterSnap_.getPos());
-        twHelper.setTLastProc(ros::Time::now());        
+        Eigen::Matrix3d rbiTemp;
+        imuFilterSnap_.getRBI(rbiTemp);
+        rbiTemp=rbiTemp.transpose();
+        double tcurr=getCurrentTime();
+        kalmanTW_.processUpdate(tcurr-twHelper_.getTLastProc(), rbiTemp, twHelper_.getLastCommand());
+        kalmanTW_.measurementUpdate(imuFilterSnap_.getPos());
+        twHelper_.setTLastProc(tcurr);        
     }
 
     //Publish messages
@@ -171,8 +181,8 @@ void estimationNode::letStreamRunIMU(const Eigen::Vector3d accel, const Eigen::V
 {
     imuMeas thisImuMeas(ttime,accel,attRate);
     imuFilterLynx_.runUKFpropagateOnly(lynxHelper_.getTLastProc(),thisImuMeas);
-    imuFilterLynx_.setTLastProc(ttime);
-    imuFilterLynx_.setLastImuMeas(thisImuMeas);
+    lynxHelper_.setTLastProc(ttime);
+    lynxHelper_.setLastImuMeas(thisImuMeas);
     return;
 }
 
@@ -200,6 +210,12 @@ void estimationNode::letStreamSetDTGPS(const double dt)
 }
 
 
+double estimationNode::getCurrentTime()
+{
+  return (ros::Time::now()).toSec();
+}
+
+
 //Publish local_odom and mavros mocap.  Called whenever a measurement is processed
 void estimationNode::publishOdomAndMocap()
 {
@@ -210,7 +226,7 @@ void estimationNode::publishOdomAndMocap()
     //Update rotation matrix and force orthonormality  
     Eigen::Matrix<double,15,1> xState;
     Eigen::Vector3d imuAccel,imuAttRate;
-    double tlastImuPub;
+    double tlastImuPub, tdmp;
     imuFilterSnap_.getState(xState, RBI_);
 
     nav_msgs::Odometry localOdom_msg;
@@ -232,7 +248,8 @@ void estimationNode::publishOdomAndMocap()
     localOdom_msg.pose.pose.orientation.w=q0.w();
 
     //Remove biases
-    lastImuMeasSnap_.getMeas(tlastImuPub,imuAccel,imuAttRate);
+    imuMeas tmpImuMeas = snapHelper_.getLastImuMeas();
+    tmpImuMeas.getMeas(tdmp, imuAccel, imuAttRate);
     localOdom_msg.twist.twist.angular.x=imuAttRate(0)-xState(12);
     localOdom_msg.twist.twist.angular.y=imuAttRate(1)-xState(13);
     localOdom_msg.twist.twist.angular.z=imuAttRate(2)-xState(14);

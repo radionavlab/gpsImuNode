@@ -14,7 +14,7 @@
 #include <thread>
 namespace po = boost::program_options;
 
-class gpsimu_odom::estimationNode;
+//class gpsimu_odom::estimationNode;
 
 class GbxStreamEndpointGPSKF : public GbxStreamEndpoint
 {

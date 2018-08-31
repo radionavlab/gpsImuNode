@@ -11,7 +11,7 @@
 #include <gbx_ros_bridge_msgs/NavigationSolution.h>
 #include <gbx_ros_bridge_msgs/ObservablesMeasurementTime.h>
 
-class gpsimu_odom::estimationNode;
+//class gpsimu_odom::estimationNode;
 
 class rosStreamEndpointGPSKF
 {
