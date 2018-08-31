@@ -12,9 +12,15 @@
 #include <csignal>
 #include <iostream>
 #include <thread>
+#include "classes.hpp"
 namespace po = boost::program_options;
 
-//class gpsimu_odom::estimationNode;
+//Forward declaration must be namespace'd properly
+namespace gpsimu_odom
+{
+  class estimationNode;
+}
+
 
 class GbxStreamEndpointGPSKF : public GbxStreamEndpoint
 {
@@ -27,7 +33,8 @@ public:
             Eigen::Matrix3d Recef2enu_in);
     void donothing(); //compiler test
     void setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle);
-    void runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime);
+    void runRosUKF(const Eigen::Vector3d &pose, const Eigen::Vector3d &Ls2p, const double ttime);
+    void runRosUKFPropagate(const Eigen::Vector3d &acc, const Eigen::Vector3d &att, const double ttime);
     void doSetRBI0(const Eigen::Matrix3d &RBI0);
     void doSetRprimary(const Eigen::Vector3d &rp);
 
@@ -46,16 +53,18 @@ protected:
     virtual GbxStreamEndpoint::ProcessReportReturn processReport_(
                 std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId);
     virtual GbxStreamEndpoint::ProcessReportReturn processReport_(
-                std::shared_ptr<const ReportMultiBaselineRtkAttitude2D>&& pReport, const u8 streamId);
+                std::shared_ptr<const ReportAttitude2D>&& pReport, const u8 streamId);
     virtual GbxStreamEndpoint::ProcessReportReturn processReport_(
                 std::shared_ptr<const ReportImu>&& pReport, const u8 streamId);
     virtual GbxStreamEndpoint::ProcessReportReturn processReport_(
                 std::shared_ptr<const ReportImuConfig>&& pReport, const u8 streamId);
     virtual GbxStreamEndpoint::ProcessReportReturn processReport_(
                 std::shared_ptr<const ReportNavigationSolution>&& pReport, const u8 streamId);
+    virtual GbxStreamEndpoint::ProcessReportReturn processReport_(
+                std::shared_ptr<const ReportObservablesMeasurementTime>&& pReport, const u8 streamId);
 private:
     std::shared_ptr<gpsimu_odom::estimationNode> rosHandle_;
-    bool validRTKtest, validA2Dtest, hasAlreadyReceivedA2D, hasAlreadyReceivedRTK;
+    bool validRTKtest_, validA2Dtest_, hasAlreadyReceivedA2D_, hasAlreadyReceivedRTK_;
     int gpsWeek_, gpsSec_, internalSeq, sec_in_week;
     double gpsFracSec_, dtRX_, minTestStat, lastRTKtime, lastA2Dtime;
     Eigen::Quaterniond internalQuat;
@@ -66,15 +75,13 @@ private:
     filterHelper lynxHelper_, snapHelper_;
     imuMeas lastImuMeasLynx_;
 
-    tf2_ros::TransformBroadcaster tf_broadcaster_;
-
     Eigen::Vector3d zeroInECEF_, rPrimaryMeas_, rS2PMeas_, rPrimaryMeas_mu, Lcg2p_, Ls2p_, Lcg2imu_;
     Eigen::Matrix3d Recef2enu_, Rwrw_, Recef2wrw_, RBI_, QgyroOutput_;
     Eigen::Matrix<double,21,3> rCtildeCalib_, rBCalib_;
 
     double lastRTKtime_, lastA2Dtime_, minTestStat_, imuConfigAccel_, imuConfigAttRate_, tOffsetRosToUTC_,
         pi, sec_in_week_, dtRXinMeters_;
-    bool rbiIsInitialized_, isCalibratedLynx_, isCalibratedSnap_, publish_tf_, hasRosToUTC_;
+    bool rbiIsInitialized_, isCalibratedLynx_, isCalibratedSnap_, publish_tf_, hasRosToUTC_,hasRosHandle;
 
     long long int tIndexConfig_;
     uint64_t sampleFreqNum_, sampleFreqDen_;

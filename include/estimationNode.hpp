@@ -8,7 +8,6 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <Eigen/Geometry>
-#include <Eigen/Eigenvalues>
 #include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>
 #include <gbx_ros_bridge_msgs/Attitude2D.h>
 #include <gbx_ros_bridge_msgs/Imu.h>
@@ -52,8 +51,9 @@ class estimationNode
     void letStreamSetRBI(const Eigen::Matrix3d &RBI0);
     void letStreamSetRprimary(const Eigen::Vector3d &rp);
     double getCurrentTime();
-    // Modified from 
-    // https://stackoverflow.com/questions/16157976/calling-member-functions-on-a-parent-object
+    
+    filterHelper lynxHelper_;
+    gpsImu imuFilterLynx_; //public for easier access via gbxstream
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -64,8 +64,10 @@ class estimationNode
 
     ros::Publisher localOdom_pub_, mocap_pub_;
     std::string child_frame_id_;
-    gpsImu imuFilterLynx_, imuFilterSnap_;
-    filterHelper lynxHelper_, snapHelper_;
+    //gpsImu imuFilterLynx_, imuFilterSnap_;
+    gpsImu imuFilterSnap_;
+    //filterHelper lynxHelper_, snapHelper_;
+    filterHelper snapHelper_;
     imuMeas lastImuMeasLynx_;
     bool hasRosHandle;
     KalmanTW kalmanTW_;

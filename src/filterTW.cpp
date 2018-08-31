@@ -20,14 +20,14 @@ void KalmanTW::processUpdate(double dt, Eigen::Matrix3d &RBI, const double throt
   //thrott=norm(u_commanded)=TW_0*throttle_[0,1]*m*g
   Eigen::Vector3d uT=RBI*Eigen::Vector3d(0,0,thrott);
   //A, 7x7
-  Eigen::Matrix<double,4,4> A = Eigen::Matrix<double,4,4>::Identity();
+  Eigen::Matrix<double,7,7> A = Eigen::Matrix<double,7,7>::Identity();
   A(0,3) = dt; A(1,4)=dt; A(2,5)=dt;
   //B, 7x3
-  Bmat_t B = Bmat_t::Zero();
+  Eigen::Matrix<double,7,3> B = Eigen::Matrix<double,7,3>::Zero();
   B.topRows(3) = dt*dt*0.5*Eigen::Matrix3d::Identity();
   B.middleRows(3,3) = Eigen::Matrix3d::Identity()*dt;
   //B*u*tw% is the effect of tw% on x(0-5) so should be the rightmost column of A(7x7)
-  Eigen::Matrix<7,1> A_rightCol = B*uT;
+  Eigen::Matrix<double,7,1> A_rightCol = B*uT;
   A.rightCols(1) = A_rightCol;
   A(6,6)=1;
   //noise matrix

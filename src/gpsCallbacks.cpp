@@ -1,5 +1,4 @@
 //Contains all callbacks related to the Lynx as well as a test callback for the Snap imu.
-#include <Eigen/Geometry>
 #include "estimationNode.hpp"
 #include <string>
 #include <iostream>
@@ -98,9 +97,6 @@ void estimationNode::mavrosImuCallback(const sensor_msgs::Imu::ConstPtr &msg)
 
             //Cleanup
             snapHelper_.setTLastProc(thisTime);
-
-            Eigen::Matrix<double,15,1>;
-            runTWKF(imuFilterSnap_.getState());
 
             //update TW filter
             Eigen::Matrix3d rbiTemp;

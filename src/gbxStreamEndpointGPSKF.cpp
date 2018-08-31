@@ -2,12 +2,13 @@
 #include "navtoolbox.h"
 #include <sys/time.h>
 #include "mathHelperFunctions.hpp"
+#include "estimationNode.hpp"
 
 
 GbxStreamEndpointGPSKF::GbxStreamEndpointGPSKF()
 {
-        hasAlreadyReceivedA2D=false;
-        hasAlreadyReceivedRTK=false;
+        hasAlreadyReceivedA2D_=false;
+        hasAlreadyReceivedRTK_=false;
         gpsSec_=0;
         gpsWeek_=0;
         gpsFracSec_=0;
@@ -69,26 +70,27 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 
 
 //A2D callback.  Takes in message from A2D, synchronizes with message from A2D, then calls UKF update
-GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
-    std::shared_ptr<const ReportMultiBaselineRtkAttitude2D>&& pReport, const u8 streamId)
+GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
+    std::shared_ptr<const ReportAttitude2D>&& pReport, const u8 streamId)
 {
 
     int week, secOfWeek;
     double fracSec, dtRX;
     dtRX_=pReport->deltRSec();
     pReport->tSolution.get(week, secOfWeek, fracSec);
-    double ttime=tgpsToSec(week,secOfWeek,fracSec) - dtRX;
+    double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec) - dtRX;
     static int rCCalibCounter=0;
     static int calibSamples=20;
-
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
+    
     //Ignore zero messages
-    if(msg->tSolution.week<=1)
-    {return;}
+    if(week < 1)
+    {return retval;}
 
-    if(!rbiIsInitialized_ && msg->testStat>=100)
+    if(!rbiIsInitialized_ && pReport->testStat()>=100)
     {
         const Eigen::Vector3d constrainedBaselineECEF(pReport->rx(), pReport->ry(), pReport->rz());
-        const Eigen::Vector3d constrainedBaselineI(unit3(Rwrw_*Recef2enu_*constrainedBaselineECEF));
+        const Eigen::Vector3d constrainedBaselineI(gpsimu_odom::unit3(Rwrw_*Recef2enu_*constrainedBaselineECEF));
         rCtildeCalib_(rCCalibCounter%calibSamples,0)=constrainedBaselineI(0);
         rCtildeCalib_(rCCalibCounter%calibSamples,1)=constrainedBaselineI(1);
         rCtildeCalib_(rCCalibCounter%calibSamples,2)=constrainedBaselineI(2);
@@ -108,12 +110,12 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             weights.resize(calibSamples+1,1);
             weights.topRows(calibSamples)=0.5*1/calibSamples*Eigen::MatrixXd::Ones(calibSamples,1);
             weights(calibSamples)=0.5;
-            RBI_=rotMatFromWahba(weights,rCtildeCalib_,rBCalib_);
+            RBI_=gpsimu_odom::rotMatFromWahba(weights,rCtildeCalib_,rBCalib_);
             rbiIsInitialized_=true;
 
             doSetRBI0(RBI_);
         }
-        return;
+        return retval;
     }
 
     //if everything is working
@@ -127,7 +129,7 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             //Store constrained baseline vector in I frame
             const Eigen::Vector3d constrainedBaselineECEF(pReport->rx(), pReport->ry(), pReport->rz());
             rS2PMeas_ = Recef2wrw_*constrainedBaselineECEF;
-            rS2PMeas_ = unit3(rS2PMeas_);
+            rS2PMeas_ = gpsimu_odom::unit3(rS2PMeas_);
         }else
         {
             validA2Dtest_=false;
@@ -142,7 +144,7 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
         if(isCalibratedLynx_ && dtLastProc>0)
         {
 
-            runRosUKF(internalpose,rS2PMeas_,ttime);
+            runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
         }
 
         //Reset to avoid publishing twice
@@ -155,14 +157,14 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
 
 
 //SBRTK callback.  Takes in message from SBRTK, synchronizes with message from A2D, then calls UKF update
-GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId)
 {
     int week, secOfWeek;
     double fracSec, dtRX;
     dtRX_=pReport->deltRSec();
     pReport->tSolution.get(week, secOfWeek, fracSec);
-    double ttime=tgpsToSec(week,secOfWeek,fracSec) - dtRX;
+    double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec) - dtRX;
 
     if(ttime > lastRTKtime_)  //only use newest time
     {
@@ -194,7 +196,7 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             if(isCalibratedLynx_ && dtLastProc>0)
             {
 
-                runRosUKF(internalpose,rS2PMeas_,ttime);
+                runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
 
             }
 
@@ -202,38 +204,38 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             hasAlreadyReceivedRTK_=false; hasAlreadyReceivedA2D_=false; 
         }
     }
-    retval = ProcessReportReturn::ACCEPTED;
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     return retval;
 }
 
 
 
 //Checks navsol to get the most recent figures for dtRX
-GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportNavigationSolution>&& pReport, const u8 streamId)
 {
     dtRXinMeters_ = pReport->deltatRxMeters();
-    retval = ProcessReportReturn::ACCEPTED;
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     return retval; 
 }
 
 
 //Get reference RRT time and measurement offset time from Observables message
-GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportObservablesMeasurementTime>&& pReport, const u8 streamId)
 {
     int week, secOfWeek;
     double fracSec;
     pReport->tOffset.get(week, secOfWeek, fracSec);
-    double ttime=tgpsToSec(week,secOfWeek,fracSec);
+    double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec);
     lynxHelper_.setTOffset(ttime);
-    retval = ProcessReportReturn::ACCEPTED;
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     return retval; 
 }
 
 
 //Get upper 32 bits of tIndex counter
-GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportImuConfig>&& pReport, const u8 streamId)
 {
     ROS_INFO("Config message received.");
@@ -243,20 +245,20 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
     sampleFreqNum_ = pReport->sampleFreqNumerator();
     sampleFreqDen_ = pReport->sampleFreqDenominator();
     tIndexConfig_ - pReport->tIndexk();
-    retval = ProcessReportReturn::ACCEPTED;
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     return retval; 
 }
 
 
 //The code is present here but has been disabled due to lynx vibrations
 //Callback for imu subscriber for the lynx
-GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
+GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportImu>&& pReport, const u8 streamId)
 {
     //If reports are being received but the pointer to the ros node is not available, exit
     if(~hasRosHandle)
     {
-        retval = ProcessReportReturn::ACCEPTED;
+        ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
         return retval;         
     }
 
@@ -288,19 +290,21 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
     if(dt<=1e-9) //Note: NOT abs(dt), as this checks whether or not messages are received out of order as well
     {
         std::cout << "Error: 1ns between IMU measurements" << std::endl;
-        return;
+        return ProcessReportReturn::ACCEPTED;
     }
     //Only update last time used IF this time is accepted
     tLastImu=thisTime;
 
     //Use scale parameter
     Eigen::Vector3d imuAccelMeas, imuAttRateMeas;
-    imuAccelMeas(0) = pReport->acceleration[0] * imuConfigAccel_;
-    imuAccelMeas(1) = pReport->acceleration[1] * imuConfigAccel_;
-    imuAccelMeas(2) = pReport->acceleration[2] * imuConfigAccel_;
-    imuAttRateMeas(0) = pReport->angularRate[0] * imuConfigAttRate_;
-    imuAttRateMeas(1) = pReport->angularRate[1] * imuConfigAttRate_;
-    imuAttRateMeas(2) = pReport->angularRate[2] * imuConfigAttRate_;
+    const s16* const accel{pReport->acceleration()};
+    imuAccelMeas(0) = accel[0] * imuConfigAccel_;
+    imuAccelMeas(1) = accel[1] * imuConfigAccel_;
+    imuAccelMeas(2) = accel[2] * imuConfigAccel_;
+    const s16* const angR{pReport->angularRate() };
+    imuAttRateMeas(0) = angR[0] * imuConfigAttRate_;
+    imuAttRateMeas(1) = angR[1] * imuConfigAttRate_;
+    imuAttRateMeas(2) = angR[2] * imuConfigAttRate_;
 
     //LYNX_IMU_ROTATION is defined in constants.hpp
     imuAccelMeas = LYNX_IMU_ROTATION*imuAccelMeas;
@@ -323,10 +327,6 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             rosHandle_->lynxHelper_.setLastImuMeas(thisImuMeas);
 
             rosHandle_->imuFilterLynx_.runUKFpropagateOnly(tLastProcessed,thisImuMeas);
-
-            //Publish
-            updateType = "imu"; publishOdomAndMocap();
-            //RBI_ is updated when publisher is called.
 
             //Cleanup
             rosHandle_->lynxHelper_.setTLastProc(thisTime);
@@ -360,18 +360,18 @@ GbxStreamEndpoint::ProcessReportReturn estimationNode::processReport_(
             rosHandle_->imuFilterLynx_.setState(xState,RBI_);
         }
     }
-    retval = ProcessReportReturn::ACCEPTED;
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     return retval; 
 }
 
 
-void GbxStreamEndpointGPSKF::runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime)
+void GbxStreamEndpointGPSKF::runRosUKF(const Eigen::Vector3d &pose, const Eigen::Vector3d &Ls2p, const double ttime)
 {
     rosHandle_->letStreamRunGPS(pose, Ls2p, ttime);
 }
 
 
-void GbxStreamEndpointGPSKF::runRosUKFPropagate(const Eigen::Vector3d acc, const Eigen::Vector3d att, const double ttime)
+void GbxStreamEndpointGPSKF::runRosUKFPropagate(const Eigen::Vector3d &acc, const Eigen::Vector3d &att, const double ttime)
 {
     rosHandle_->letStreamRunGPS(acc, att, ttime);
 }

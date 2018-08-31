@@ -179,7 +179,7 @@ Eigen::Matrix3d rotMatFromEuler(const Eigen::Vector3d &ee)
 //Convert gps time to seconds.
 double tgpsToSec(const int week, const int secOfWeek, const double fracSec)
 {
-	return fracSec + secOfWeek + SEC_PER_WEEK*week;
+	return fracSec + secOfWeek + SEC_IN_WEEK*week;
 }
 
 

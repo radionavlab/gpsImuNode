@@ -13,7 +13,7 @@ public:
 
     void initialize(const Eigen::Matrix<double,7,1> &state, const Eigen::Matrix<double,7,7> &initial_cov,
         const Eigen::Matrix<double,4,4> &process_noise,
-        const Eigen::Vector3d &meas_noise);
+        const Eigen::Matrix3d &meas_noise);
 
     //Process update every time a new mavlink message is received
     //Measurement update every time a new IMU measurement is received
