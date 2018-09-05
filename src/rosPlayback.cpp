@@ -2,6 +2,7 @@
 #include "navtoolbox.h"
 #include <sys/time.h>
 #include "mathHelperFunctions.hpp"
+#include "estimationNode.hpp"
 
 
 void rosStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
@@ -14,6 +15,7 @@ void rosStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d base
 
     ros::param::get(GPSKFName + "/posePubTopic", posePubTopic);
     ros::param::get(GPSKFName + "/minimumTestStat",minTestStat);
+    ros::param::get(GPSKFName + "/runLynx",LYNX_IMU);
 
     rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&estimationNode::singleBaselineRTKCallback,
                                         this, ros::TransportHints().tcpNoDelay());
@@ -124,8 +126,7 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
         hasAlreadyReceivedRTK_=false; hasAlreadyReceivedA2D_=false;
         }
     }
-    retval = ProcessReportReturn::ACCEPTED;
-    return retval;    
+    return;    
 }
 
 
@@ -176,8 +177,8 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
             hasAlreadyReceivedRTK_=false; hasAlreadyReceivedA2D_=false; 
         }
     }
-    retval = ProcessReportReturn::ACCEPTED;
-    return retval;
+    
+    return;
 }
 
 
@@ -185,8 +186,7 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
 void estimationNode::navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg)
 {
     dtRXinMeters_ = msg->deltatRxMeters();
-    retval = ProcessReportReturn::ACCEPTED;
-    return retval; 
+    return; 
 }
 
 
@@ -198,8 +198,7 @@ void estimationNode::tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasu
     msg->tOffset.get(week, secOfWeek, fracSec);
     double ttime=tgpsToSec(week,secOfWeek,fracSec);
     lynxHelper_.setTOffset(ttime);
-    retval = ProcessReportReturn::ACCEPTED;
-    return retval; 
+    return; 
 }
 
 
@@ -213,8 +212,8 @@ void estimationNode::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::Con
     sampleFreqNum_ = msg->sampleFreqNumerator();
     sampleFreqDen_ = msg->sampleFreqDenominator();
     tIndexConfig_ - msg->tIndexk();
-    retval = ProcessReportReturn::ACCEPTED;
-    return retval; 
+    
+    return; 
 }
 
 
@@ -223,10 +222,9 @@ void estimationNode::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::Con
 void estimationNode::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
 {
     //If reports are being received but the pointer to the ros node is not available, exit
-    if(~hasRosHandle)
+    if(~hasRosHandle || ~LYNX_IMU)
     {
-        retval = ProcessReportReturn::ACCEPTED;
-        return retval;         
+        return;         
     }
 
 
@@ -293,10 +291,6 @@ void estimationNode::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
 
             rosHandle_->imuFilterLynx_.runUKFpropagateOnly(tLastProcessed,thisImuMeas);
 
-            //Publish
-            updateType = "imu"; publishOdomAndMocap();
-            //RBI_ is updated when publisher is called.
-
             //Cleanup
             rosHandle_->lynxHelper_.setTLastProc(thisTime);
 
@@ -329,8 +323,8 @@ void estimationNode::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
             rosHandle_->imuFilterLynx_.setState(xState,RBI_);
         }
     }
-    retval = ProcessReportReturn::ACCEPTED;
-    return retval; 
+    
+    return; 
 }
 
 

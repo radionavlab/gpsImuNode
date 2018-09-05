@@ -31,7 +31,7 @@ public:
     virtual ~GbxStreamEndpointGPSKF();
     void configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
             Eigen::Matrix3d Recef2enu_in);
-    void donothing(); //compiler test
+    void donothing(); //test
     void setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle);
     void runRosUKF(const Eigen::Vector3d &pose, const Eigen::Vector3d &Ls2p, const double ttime);
     void runRosUKFPropagate(const Eigen::Vector3d &acc, const Eigen::Vector3d &att, const double ttime);

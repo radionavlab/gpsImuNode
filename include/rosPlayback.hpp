@@ -10,8 +10,13 @@
 #include <gbx_ros_bridge_msgs/ImuConfig.h>
 #include <gbx_ros_bridge_msgs/NavigationSolution.h>
 #include <gbx_ros_bridge_msgs/ObservablesMeasurementTime.h>
+#include "classes.hpp"
 
-//class gpsimu_odom::estimationNode;
+//Namespace'd forward declaration
+namespace gpsimu_odom
+{
+    class estimationNode;
+}
 
 class rosStreamEndpointGPSKF
 {
@@ -27,7 +32,7 @@ public:
     // More useful functions
     void configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
             Eigen::Matrix3d Recef2enu_in);
-    void donothing(); //compiler test
+    void donothing(); //test function
     void singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg);
     void attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg);
     void imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg);
@@ -44,7 +49,7 @@ public:
 
 private:
     std::shared_ptr<gpsimu_odom::estimationNode> rosHandle_;
-    bool validRTKtest, validA2Dtest, hasAlreadyReceivedA2D, hasAlreadyReceivedRTK;
+    bool validRTKtest, validA2Dtest, hasAlreadyReceivedA2D, hasAlreadyReceivedRTK, LYNX_IMU;
     int gpsWeek_, gpsSec_, internalSeq, sec_in_week;;
     double gpsFracSec_, dtRX_, minTestStat, lastRTKtime, lastA2Dtime;
     Eigen::Quaterniond internalQuat;
@@ -55,8 +60,6 @@ private:
     std::string child_frame_id_;
     filterHelper lynxHelper_;
     imuMeas lastImuMeasLynx_;
-
-    tf2_ros::TransformBroadcaster tf_broadcaster_;
 
     Eigen::Vector3d zeroInECEF_, rPrimaryMeas_, rS2PMeas_, rPrimaryMeas_mu, Lcg2p_, Ls2p_, Lcg2imu_;
     Eigen::Matrix3d Recef2enu_, Rwrw_, Recef2wrw_, RBI_, QgyroOutput_;

@@ -43,7 +43,7 @@ void GbxStreamEndpointGPSKF::setRosPointer(std::shared_ptr<gpsimu_odom::estimati
 
 void GbxStreamEndpointGPSKF::donothing()
 {
-    std::cout << "Do nothing called" << std::endl;
+    std::cout << "Creating gbx stream object for quad" << std::endl;
     return;
 }
 
