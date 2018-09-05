@@ -17,17 +17,17 @@ void rosStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d base
     ros::param::get(GPSKFName + "/minimumTestStat",minTestStat);
     ros::param::get(GPSKFName + "/runLynx",LYNX_IMU);
 
-    rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&estimationNode::singleBaselineRTKCallback,
+    rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&rosStreamEndpointGPSKF::singleBaselineRTKCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    a2dSub_ = nh.subscribe("Attitude2D",10,&estimationNode::attitude2DCallback,
+    a2dSub_ = nh.subscribe("Attitude2D",10,&rosStreamEndpointGPSKF::attitude2DCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    imuSub_ = nh.subscribe("IMU",10, &estimationNode::lynxImuCallback,
+    imuSub_ = nh.subscribe("IMU",10, &rosStreamEndpointGPSKF::lynxImuCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    imuConfigSub_ = nh.subscribe("IMUConfig",10, &estimationNode::imuConfigCallback,
+    imuConfigSub_ = nh.subscribe("IMUConfig",10, &rosStreamEndpointGPSKF::imuConfigCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    navSub_ = nh.subscribe("NavigationSolution",10,&estimationNode::navsolCallback,
+    navSub_ = nh.subscribe("NavigationSolution",10,&rosStreamEndpointGPSKF::navsolCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&estimationNode::tOffsetCallback,
+    tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&rosStreamEndpointGPSKF::tOffsetCallback,
                                         this, ros::TransportHints().tcpNoDelay());
 }
 
@@ -47,14 +47,17 @@ void rosStreamEndpointGPSKF::donothing()
 
 
 //A2D callback.  Takes in message from A2D, synchronizes with message from A2D, then calls UKF update
-void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg)
+void rosStreamEndpointGPSKF::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg)
 {
-
+    if(~hasRosHandle)
+    {return;}
     int week, secOfWeek;
     double fracSec, dtRX;
-    dtRX_=msg->deltRSec();
-    msg->tSolution.get(week, secOfWeek, fracSec);
-    double ttime=tgpsToSec(week,secOfWeek,fracSec) - dtRX;
+    dtRX_=msg->deltRSec;
+    week = msg->tSolution.week;
+    secOfWeek = msg->tSolution.secondsOfWeek;
+    fracSec = msg->tSolution.fractionOfSecond;
+    double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec) - dtRX;
     static int rCCalibCounter=0;
     static int calibSamples=20;
 
@@ -64,8 +67,8 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
 
     if(!rbiIsInitialized_ && msg->testStat>=100)
     {
-        const Eigen::Vector3d constrainedBaselineECEF(msg->rx(), msg->ry(), msg->rz());
-        const Eigen::Vector3d constrainedBaselineI(unit3(Rwrw_*Recef2enu_*constrainedBaselineECEF));
+        const Eigen::Vector3d constrainedBaselineECEF(msg->rx, msg->ry, msg->rz);
+        const Eigen::Vector3d constrainedBaselineI(gpsimu_odom::unit3(Rwrw_*Recef2enu_*constrainedBaselineECEF));
         rCtildeCalib_(rCCalibCounter%calibSamples,0)=constrainedBaselineI(0);
         rCtildeCalib_(rCCalibCounter%calibSamples,1)=constrainedBaselineI(1);
         rCtildeCalib_(rCCalibCounter%calibSamples,2)=constrainedBaselineI(2);
@@ -85,7 +88,7 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
             weights.resize(calibSamples+1,1);
             weights.topRows(calibSamples)=0.5*1/calibSamples*Eigen::MatrixXd::Ones(calibSamples,1);
             weights(calibSamples)=0.5;
-            RBI_=rotMatFromWahba(weights,rCtildeCalib_,rBCalib_);
+            RBI_=gpsimu_odom::rotMatFromWahba(weights,rCtildeCalib_,rBCalib_);
             rbiIsInitialized_=true;
 
             doSetRBI0(RBI_);
@@ -98,13 +101,13 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
     {
         hasAlreadyReceivedA2D_=true;
         lastA2Dtime_=ttime;
-        if(msg->testStat() > minTestStat_)
+        if(msg->testStat > minTestStat_)
         {
             validA2Dtest_=true;
             //Store constrained baseline vector in I frame
-            const Eigen::Vector3d constrainedBaselineECEF(msg->rx(), msg->ry(), msg->rz());
+            const Eigen::Vector3d constrainedBaselineECEF(msg->rx, msg->ry, msg->rz);
             rS2PMeas_ = Recef2wrw_*constrainedBaselineECEF;
-            rS2PMeas_ = unit3(rS2PMeas_);
+            rS2PMeas_ = gpsimu_odom::unit3(rS2PMeas_);
         }else
         {
             validA2Dtest_=false;
@@ -119,7 +122,7 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
         if(isCalibratedLynx_ && dtLastProc>0)
         {
 
-            runRosUKF(internalpose,rS2PMeas_,ttime);
+            runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
         }
 
         //Reset to avoid publishing twice
@@ -131,27 +134,31 @@ void estimationNode::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::C
 
 
 //SBRTK callback.  Takes in message from SBRTK, synchronizes with message from A2D, then calls UKF update
-void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
+void rosStreamEndpointGPSKF::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
 {
+    if(~hasRosHandle)
+    {return;}
     int week, secOfWeek;
     double fracSec, dtRX;
-    dtRX_=msg->deltRSec();
-    msg->tSolution.get(week, secOfWeek, fracSec);
-    double ttime=tgpsToSec(week,secOfWeek,fracSec) - dtRX;
+    dtRX_=msg->deltRSec;
+    week = msg->tSolution.week;
+    secOfWeek = msg->tSolution.secondsOfWeek;
+    fracSec = msg->tSolution.fractionOfSecond;
+    double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec) - dtRX;
 
     if(ttime > lastRTKtime_)  //only use newest time
     {
         hasAlreadyReceivedRTK_=true;
         lastRTKtime_=ttime;
         //If the message is accepted
-        if(msg->testStat() > minTestStat_)
+        if(msg->testStat > minTestStat_)
             {
                 validRTKtest_=true;
                 Eigen::Vector3d tmpvec;
                 //Rotate rECEF to rI and store in rPrimaryMeas_
-                tmpvec(0) = msg->rx() - zeroInECEF_(0); //error vector from ECEF at init time
-                tmpvec(1) = msg->ry() - zeroInECEF_(1);
-                tmpvec(2) = msg->rz() - zeroInECEF_(2);
+                tmpvec(0) = msg->rx - zeroInECEF_(0); //error vector from ECEF at init time
+                tmpvec(1) = msg->ry - zeroInECEF_(1);
+                tmpvec(2) = msg->rz - zeroInECEF_(2);
                 rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec;
                 doSetRprimary(rPrimaryMeas_); //sets rPrimaryMeas_ in estimationNode
             }else
@@ -169,7 +176,7 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
             if(isCalibratedLynx_ && dtLastProc>0)
             {
 
-                runRosUKF(internalpose,rS2PMeas_,ttime);
+                runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
 
             }
 
@@ -183,35 +190,37 @@ void estimationNode::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::Single
 
 
 //Checks navsol to get the most recent figures for dtRX
-void estimationNode::navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg)
+void rosStreamEndpointGPSKF::navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg)
 {
-    dtRXinMeters_ = msg->deltatRxMeters();
+    dtRXinMeters_ = msg->deltatRxMeters;
     return; 
 }
 
 
 //Get reference RRT time and measurement offset time from Observables message
-void estimationNode::tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg)
+void rosStreamEndpointGPSKF::tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg)
 {
     int week, secOfWeek;
     double fracSec;
-    msg->tOffset.get(week, secOfWeek, fracSec);
-    double ttime=tgpsToSec(week,secOfWeek,fracSec);
+    week =  msg->tOffset.week;
+    secOfWeek = msg->tOffset.secondsOfWeek;
+    fracSec = msg->tOffset.fractionOfSecond;
+    double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec);
     lynxHelper_.setTOffset(ttime);
     return; 
 }
 
 
 //Get upper 32 bits of tIndex counter
-void estimationNode::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg)
+void rosStreamEndpointGPSKF::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg)
 {
     ROS_INFO("Config message received.");
-    imuConfigAccel_ = msg->lsbToMetersPerSecSq(); //scaling to m/s2 from "non-engineering units"
-    imuConfigAttRate_ = msg->lsbToRadPerSec(); //scaling to rad/s from "non-engineering units"
+    imuConfigAccel_ = msg->lsbToMetersPerSecSq; //scaling to m/s2 from "non-engineering units"
+    imuConfigAttRate_ = msg->lsbToRadPerSec; //scaling to rad/s from "non-engineering units"
     
-    sampleFreqNum_ = msg->sampleFreqNumerator();
-    sampleFreqDen_ = msg->sampleFreqDenominator();
-    tIndexConfig_ - msg->tIndexk();
+    sampleFreqNum_ = msg->sampleFreqNumerator;
+    sampleFreqDen_ = msg->sampleFreqDenominator;
+    tIndexConfig_ - msg->tIndexk;
     
     return; 
 }
@@ -219,7 +228,7 @@ void estimationNode::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::Con
 
 //The code is present here but has been disabled due to lynx vibrations
 //Callback for imu subscriber for the lynx
-void estimationNode::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
+void rosStreamEndpointGPSKF::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
 {
     //If reports are being received but the pointer to the ros node is not available, exit
     if(~hasRosHandle || ~LYNX_IMU)
@@ -241,7 +250,7 @@ void estimationNode::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &m
 
     double tLastProcessed = lynxHelper_.getTLastProc();
     //Calculate IMU time
-    const uint64_t tIndex = msg->tIndexTruncated();
+    const uint64_t tIndex = msg->tIndexTrunc;
     const long long int tIndexFull = (tIndexConfig_ & ~mask) | (tIndex & mask); //Bit-mask, don't bit-shift
     const double sampleFreq = sampleFreqNum_/sampleFreqDen_;
     const double tRRT = tIndexFull/sampleFreq; //tIndexFull is in samples, divide by samples/s
@@ -336,7 +345,7 @@ void rosStreamEndpointGPSKF::runRosUKF(const Eigen::Vector3d pose, const Eigen::
 
 void rosStreamEndpointGPSKF::runRosUKFPropagate(const Eigen::Vector3d acc, const Eigen::Vector3d att, const double ttime)
 {
-    rosHandle_->letStreamRunGPS(acc, att, ttime);
+    rosHandle_->letStreamRunIMU(acc, att, ttime);
 }
 
 
@@ -348,11 +357,6 @@ void rosStreamEndpointGPSKF::doSetRBI0(const Eigen::Matrix3d &RBI0)
 void rosStreamEndpointGPSKF::doSetRprimary(const Eigen::Vector3d &rp)
 {
     rosHandle_->letStreamSetRprimary(rp);
-}
-
-void rosStreamEndpointGPSKF::doSetTOffset(const double dt)
-{
-    rosHandle_->letStreamSetDTGPS(dt);
 }
 
 

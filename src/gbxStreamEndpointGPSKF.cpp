@@ -373,7 +373,7 @@ void GbxStreamEndpointGPSKF::runRosUKF(const Eigen::Vector3d &pose, const Eigen:
 
 void GbxStreamEndpointGPSKF::runRosUKFPropagate(const Eigen::Vector3d &acc, const Eigen::Vector3d &att, const double ttime)
 {
-    rosHandle_->letStreamRunGPS(acc, att, ttime);
+    rosHandle_->letStreamRunIMU(acc, att, ttime);
 }
 
 

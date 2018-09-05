@@ -75,7 +75,7 @@ int main(int argc, char **argv)
         epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::CODA);
         epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::SINGLE_BASELINE_RTK);
         epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::ATTITUDE_2D);
-        if(LYNX_IMU) //only process lynx reports if lynx is to be used
+        if(LYNX_IMU) //only process imu reports if lynx is to be used
         {
             epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::IMU);
             epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::IMU_CONFIG);

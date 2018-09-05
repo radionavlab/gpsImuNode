@@ -22,11 +22,12 @@ class rosStreamEndpointGPSKF
 {
 public:
     rosStreamEndpointGPSKF() {
-        hasAlreadyReceivedA2D=false;
-        hasAlreadyReceivedRTK=false;
+        hasAlreadyReceivedA2D_=false;
+        hasAlreadyReceivedRTK_=false;
         gpsSec_=0;
         gpsWeek_=0;
         gpsFracSec_=0;
+        hasRosHandle=false;
     }
 
     // More useful functions
@@ -41,7 +42,8 @@ public:
     void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);    
     void setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle);
     void runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime);
-
+    void runRosUKFPropagate(const Eigen::Vector3d acc, const Eigen::Vector3d att, const double ttime);
+    
     void doSetRBI0(const Eigen::Matrix3d &RBI0);
     void doSetRprimary(const Eigen::Vector3d &rp);
 
@@ -49,7 +51,7 @@ public:
 
 private:
     std::shared_ptr<gpsimu_odom::estimationNode> rosHandle_;
-    bool validRTKtest, validA2Dtest, hasAlreadyReceivedA2D, hasAlreadyReceivedRTK, LYNX_IMU;
+    bool validRTKtest_, validA2Dtest_, hasAlreadyReceivedA2D_, hasAlreadyReceivedRTK_, hasRosHandle, LYNX_IMU;
     int gpsWeek_, gpsSec_, internalSeq, sec_in_week;;
     double gpsFracSec_, dtRX_, minTestStat, lastRTKtime, lastA2Dtime;
     Eigen::Quaterniond internalQuat;
