@@ -58,7 +58,6 @@ private:
     Eigen::Vector3d internalPose, baseECEF_vector, L_cg2p;
     Eigen::Matrix3d RBI, Recef2enu;
 
-    // TO-DO: CLEAN UP DUPLICATES LATER
     std::string child_frame_id_;
     filterHelper lynxHelper_;
     imuMeas lastImuMeasLynx_;

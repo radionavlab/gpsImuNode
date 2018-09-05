@@ -5,9 +5,11 @@
   <arg name="publish_tf" default="true"/>
   <arg name="gps_fps" default="20"/>
   <arg name="output" default="screen"/>
+  <arg name="quad_namespace"/>
+  <arg name="gbxport"/>
 
   <node pkg="gps_imu" type="gpsImu_node" name="gpsimuFilter"
-    output="$(arg output)" ns="phoenix">
+    output="$(arg output)" ns="$(arg quad_namespace)">
     <param name="child_frame_id" type="string" value="$(arg child_frame_id)"/>
     <param name="publish_tf" type="bool" value="$(arg publish_tf)"/>
     <param name="gps_fps" type="int" value="$(arg gps_fps)"/>
@@ -19,6 +21,7 @@
     <param name="maxThrust" value="16.4808"/>
     <param name="useUDP" type="bool" value="false"/>
 
+    <param name="gbxport" type="int" value="$(arg gbxport)"/>
     <param name="minimumTestStat" value="5"/> <!--do not process measurements with worse teststat-->
     <param name="arenaCenterX" value="-742015.09"/> <!--ECEF-->
     <param name="arenaCenterY" value="-5462218.82"/>
@@ -27,6 +30,9 @@
     <param name="arenaCenterX_ENU" value="-0.10"/>  <!-- -0.553-->
     <param name="arenaCenterY_ENU" value="0.005"/>  <!-- -0.538-->
     <param name="arenaCenterZ_ENU" value="-0.05"/>   <!--5.720-->
+
+    <param name="runLynx" type="bool" value="true"/>
+    <param name="runSnap" type="bool" value="false"/>
   </node>
 
 </launch>
