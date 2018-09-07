@@ -24,10 +24,13 @@ void GbxStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d base
     std::string GPSKFName, posePubTopic;
     GPSKFName = ros::this_node::getName();
     Recef2enu = Recef2enu_in;
-    baseECEF_vector_in = baseECEF_vector;
+    zeroInECEF_ = baseECEF_vector_in;
 
     ros::param::get(GPSKFName + "/posePubTopic", posePubTopic);
     ros::param::get(GPSKFName + "/minimumTestStat",minTestStat);
+    ros::param::get(GPSKFName + "/arenaCenterX_ENU",offsetToGround_(0));
+    ros::param::get(GPSKFName + "/arenaCenterY_ENU",offsetToGround_(1));
+    ros::param::get(GPSKFName + "/arenaCenterZ_ENU",offsetToGround_(2));
     internalSeq=0;
     sec_in_week = 604800;
     L_cg2p << 0.1013,-0.0004,0.0472;
@@ -176,10 +179,10 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
                 validRTKtest_=true;
                 Eigen::Vector3d tmpvec;
                 //Rotate rECEF to rI and store in rPrimaryMeas_
-                tmpvec(0) = pReport->rx() - zeroInECEF_(0); //error vector from ECEF at init time
-                tmpvec(1) = pReport->ry() - zeroInECEF_(1);
-                tmpvec(2) = pReport->rz() - zeroInECEF_(2);
-                rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec;
+                tmpvec(0) = pReport->rxRov() - zeroInECEF_(0); //error vector from ECEF at init time
+                tmpvec(1) = pReport->ryRov() - zeroInECEF_(1);
+                tmpvec(2) = pReport->rzRov() - zeroInECEF_(2);
+                rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec - offsetToGround_;
                 doSetRprimary(rPrimaryMeas_); //sets rPrimaryMeas_ in estimationNode
             }else
             {

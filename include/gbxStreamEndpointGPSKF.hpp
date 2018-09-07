@@ -75,7 +75,7 @@ private:
     filterHelper lynxHelper_, snapHelper_;
     imuMeas lastImuMeasLynx_;
 
-    Eigen::Vector3d zeroInECEF_, rPrimaryMeas_, rS2PMeas_, rPrimaryMeas_mu, Lcg2p_, Ls2p_, Lcg2imu_;
+    Eigen::Vector3d zeroInECEF_, rPrimaryMeas_, rS2PMeas_, rPrimaryMeas_mu, Lcg2p_, Ls2p_, Lcg2imu_,offsetToGround_;
     Eigen::Matrix3d Recef2enu_, Rwrw_, Recef2wrw_, RBI_, QgyroOutput_;
     Eigen::Matrix<double,21,3> rCtildeCalib_, rBCalib_;
 
