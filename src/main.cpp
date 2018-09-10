@@ -1,6 +1,7 @@
 #include <Eigen/Geometry>
 #include "estimationNode.hpp"
 #include "gbxStreamEndpointGPSKF.hpp"
+#include "rosStreamEndpointGPSKF.hpp"
 #include "rosPlayback.hpp"
 #include <string>
 #include <iostream>
@@ -40,13 +41,12 @@ int main(int argc, char **argv)
 
     //gpsimu_odom::estimationNode gpsimu_odom(nh);
     auto gpsimu = std::make_shared<gpsimu_odom::estimationNode>(nh);
-    ros::spin();
 
     std::string quadName = ros::this_node::getName();
 
     //Determine whether to create a GBXStream or a ROSStream
-    bool runViaPostProcessedRosbag;
-    ros::param::get(quadName + "/runViaRosbag", runViaPostProcessedRosbag);
+    int mode;
+    ros::param::get(quadName + "/nodeType", mode);
 
     //Common setup
     Eigen::Vector3d baseECEF_vector;
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
     ros::param::get(quadName + "/arenaCenterZ", baseECEF_vector(2));
     Eigen::Matrix3d Recef2enu = gpsimu_odom::ecef2enu_rotMatrix(baseECEF_vector);
 
-    if(~runViaPostProcessedRosbag)
+    if(mode==1) //online gbx stream
     {
         int gbxport;
 
@@ -87,13 +87,23 @@ int main(int argc, char **argv)
         auto epInput = std::make_shared<GbxStreamEndpointIN>(port, OptionObject::protocol_enum::IP_UDP, OptionObject::peer_type_enum::ROVER);
         gbxStream->resumeStream();
     }
-    else
+    else if(mode==2)  //online ros stream
     {
         auto rosStream = std::make_shared<rosStreamEndpointGPSKF>();
         rosStream->configure(nh, baseECEF_vector, Recef2enu);
         rosStream->setRosPointer(gpsimu);
-        ros::spin();
+    }else if(mode==3) //online ros stream from vicon
+    {
+    
+    }else if(mode==4) //post-process a ros stream (rosbag)
+    {
+        auto rosStream = std::make_shared<rosPlayback>();
+        rosStream->configure(nh,baseECEF_vector,Recef2enu);
+        rosStream->setRosPointer(gpsimu);
     }
+
+
+    ros::spin();
     
     return 0;
 }

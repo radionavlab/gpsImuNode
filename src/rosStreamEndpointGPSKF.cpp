@@ -1,11 +1,11 @@
-#include "rosPlayback.hpp"
+#include "rosStreamEndpointGPSKF.hpp"
 #include "navtoolbox.h"
 #include <sys/time.h>
 #include "mathHelperFunctions.hpp"
 #include "estimationNode.hpp"
 
 
-void rosPlayback::configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
+void rosStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
             Eigen::Matrix3d Recef2enu_in)
 {
     std::string GPSKFName, posePubTopic;
@@ -17,29 +17,29 @@ void rosPlayback::configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector
     ros::param::get(GPSKFName + "/minimumTestStat",minTestStat);
     ros::param::get(GPSKFName + "/runLynx",LYNX_IMU);
 
-    rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&rosPlayback::singleBaselineRTKCallback,
+    rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&rosStreamEndpointGPSKF::singleBaselineRTKCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    a2dSub_ = nh.subscribe("Attitude2D",10,&rosPlayback::attitude2DCallback,
+    a2dSub_ = nh.subscribe("Attitude2D",10,&rosStreamEndpointGPSKF::attitude2DCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    imuSub_ = nh.subscribe("IMU",10, &rosPlayback::lynxImuCallback,
+    imuSub_ = nh.subscribe("IMU",10, &rosStreamEndpointGPSKF::lynxImuCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    imuConfigSub_ = nh.subscribe("IMUConfig",10, &rosPlayback::imuConfigCallback,
+    imuConfigSub_ = nh.subscribe("IMUConfig",10, &rosStreamEndpointGPSKF::imuConfigCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    navSub_ = nh.subscribe("NavigationSolution",10,&rosPlayback::navsolCallback,
+    navSub_ = nh.subscribe("NavigationSolution",10,&rosStreamEndpointGPSKF::navsolCallback,
                                         this, ros::TransportHints().tcpNoDelay());
-    tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&rosPlayback::tOffsetCallback,
+    tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&rosStreamEndpointGPSKF::tOffsetCallback,
                                         this, ros::TransportHints().tcpNoDelay());
 }
 
 
-void rosPlayback::setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle)
+void rosStreamEndpointGPSKF::setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle)
 {
     rosHandle_=rosHandle;
     hasRosHandle=true;
     return;
 }
 
-void rosPlayback::donothing()
+void rosStreamEndpointGPSKF::donothing()
 {
     std::cout << "Do nothing called" << std::endl;
     return;
@@ -47,7 +47,7 @@ void rosPlayback::donothing()
 
 
 //A2D callback.  Takes in message from A2D, synchronizes with message from A2D, then calls UKF update
-void rosPlayback::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg)
+void rosStreamEndpointGPSKF::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg)
 {
     if(~hasRosHandle)
     {return;}
@@ -134,7 +134,7 @@ void rosPlayback::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::Cons
 
 
 //SBRTK callback.  Takes in message from SBRTK, synchronizes with message from A2D, then calls UKF update
-void rosPlayback::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
+void rosStreamEndpointGPSKF::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
 {
     if(~hasRosHandle)
     {return;}
@@ -190,7 +190,7 @@ void rosPlayback::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBas
 
 
 //Checks navsol to get the most recent figures for dtRX
-void rosPlayback::navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg)
+void rosStreamEndpointGPSKF::navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg)
 {
     dtRXinMeters_ = msg->deltatRxMeters;
     return; 
@@ -198,7 +198,7 @@ void rosPlayback::navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::
 
 
 //Get reference RRT time and measurement offset time from Observables message
-void rosPlayback::tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg)
+void rosStreamEndpointGPSKF::tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg)
 {
     int week, secOfWeek;
     double fracSec;
@@ -212,7 +212,7 @@ void rosPlayback::tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurem
 
 
 //Get upper 32 bits of tIndex counter
-void rosPlayback::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg)
+void rosStreamEndpointGPSKF::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg)
 {
     ROS_INFO("Config message received.");
     imuConfigAccel_ = msg->lsbToMetersPerSecSq; //scaling to m/s2 from "non-engineering units"
@@ -228,7 +228,7 @@ void rosPlayback::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstP
 
 //The code is present here but has been disabled due to lynx vibrations
 //Callback for imu subscriber for the lynx
-void rosPlayback::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
+void rosStreamEndpointGPSKF::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
 {
     //If reports are being received but the pointer to the ros node is not available, exit
     if(~hasRosHandle || ~LYNX_IMU)
@@ -282,9 +282,7 @@ void rosPlayback::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
     imuAccelMeas = LYNX_IMU_ROTATION*imuAccelMeas;
     imuAttRateMeas = LYNX_IMU_ROTATION*imuAttRateMeas;
 
-    double tOffsetRosToUTC = tGPS - (ros::Time::now()).toSec();
     hasRosToUTC_=true;
-    rosHandle_->lynxHelper_.setTOffset(tOffsetRosToUTC);
 
     //Run CF if calibrated
     if(isCalibratedLynx_)
@@ -337,24 +335,24 @@ void rosPlayback::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
 }
 
 
-void rosPlayback::runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime)
+void rosStreamEndpointGPSKF::runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime)
 {
     rosHandle_->letStreamRunGPS(pose, Ls2p, ttime);
 }
 
 
-void rosPlayback::runRosUKFPropagate(const Eigen::Vector3d acc, const Eigen::Vector3d att, const double ttime)
+void rosStreamEndpointGPSKF::runRosUKFPropagate(const Eigen::Vector3d acc, const Eigen::Vector3d att, const double ttime)
 {
     rosHandle_->letStreamRunIMU(acc, att, ttime);
 }
 
 
-void rosPlayback::doSetRBI0(const Eigen::Matrix3d &RBI0)
+void rosStreamEndpointGPSKF::doSetRBI0(const Eigen::Matrix3d &RBI0)
 {
     rosHandle_->letStreamSetRBI(RBI0);
 }
 
-void rosPlayback::doSetRprimary(const Eigen::Vector3d &rp)
+void rosStreamEndpointGPSKF::doSetRprimary(const Eigen::Vector3d &rp)
 {
     rosHandle_->letStreamSetRprimary(rp);
 }

@@ -18,10 +18,10 @@ namespace gpsimu_odom
     class estimationNode;
 }
 
-class rosPlayback
+class rosStreamEndpointGPSKF
 {
 public:
-    rosPlayback() {
+    rosStreamEndpointGPSKF() {
         hasAlreadyReceivedA2D_=false;
         hasAlreadyReceivedRTK_=false;
         gpsSec_=0;

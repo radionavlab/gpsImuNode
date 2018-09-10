@@ -6,7 +6,7 @@
   <arg name="gps_fps" default="20"/>
   <arg name="output" default="screen"/>
   <arg name="quad_namespace"/>
-  <arg name="gbxport"/>
+  <arg name="gbxport" default="5555"/>
 
   <node pkg="gps_imu" type="gpsImu_node" name="gpsimuFilter"
     output="$(arg output)" ns="$(arg quad_namespace)">
@@ -20,6 +20,14 @@
     <param name="posePubTopic" type="string" value="selfpub"/>
     <param name="maxThrust" value="16.4808"/>
     <param name="useUDP" type="bool" value="false"/>
+
+    <!--nodeType determines how to process the data and what input stream to use.
+        1 = gbx
+        2 = ros
+        3 = vicon
+        4 = rosbag
+        Vicon will be implemented at a later date-->
+    <param name="nodeType" type="int" value="1"/>
 
     <param name="gbxport" type="int" value="$(arg gbxport)"/>
     <param name="minimumTestStat" value="5"/> <!--do not process measurements with worse teststat-->
