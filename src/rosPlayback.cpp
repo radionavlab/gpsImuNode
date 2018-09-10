@@ -5,18 +5,20 @@
 #include "estimationNode.hpp"
 
 
-void rosPlayback::configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
-            Eigen::Matrix3d Recef2enu_in)
+void rosPlayback::configure(ros::NodeHandle &nh, Eigen::Vector3d &baseECEF_vector_in,
+            Eigen::Matrix3d &Recef2enu_in, Eigen::Matrix3d &Rwrw)
 {
     std::string GPSKFName, posePubTopic;
     GPSKFName = ros::this_node::getName();
     Recef2enu = Recef2enu_in;
     baseECEF_vector_in = baseECEF_vector;
+    Rwrw_=Rwrw;
 
     ros::param::get(GPSKFName + "/posePubTopic", posePubTopic);
     ros::param::get(GPSKFName + "/minimumTestStat",minTestStat);
     ros::param::get(GPSKFName + "/runLynx",LYNX_IMU);
 
+    //no harm in TCP for playback
     rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&rosPlayback::singleBaselineRTKCallback,
                                         this, ros::TransportHints().tcpNoDelay());
     a2dSub_ = nh.subscribe("Attitude2D",10,&rosPlayback::attitude2DCallback,
@@ -46,10 +48,10 @@ void rosPlayback::donothing()
 }
 
 
-//A2D callback.  Takes in message from A2D, synchronizes with message from A2D, then calls UKF update
+//A2D callback.  Takes in message from A2D, synchronizes with message from SBRTK, then calls UKF update
 void rosPlayback::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg)
 {
-    if(~hasRosHandle)
+    if(!hasRosHandle)
     {return;}
     int week, secOfWeek;
     double fracSec, dtRX;
@@ -136,7 +138,7 @@ void rosPlayback::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::Cons
 //SBRTK callback.  Takes in message from SBRTK, synchronizes with message from A2D, then calls UKF update
 void rosPlayback::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
 {
-    if(~hasRosHandle)
+    if(!hasRosHandle)
     {return;}
     int week, secOfWeek;
     double fracSec, dtRX;
@@ -231,7 +233,7 @@ void rosPlayback::imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstP
 void rosPlayback::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
 {
     //If reports are being received but the pointer to the ros node is not available, exit
-    if(~hasRosHandle || ~LYNX_IMU)
+    if(!hasRosHandle || ~LYNX_IMU)
     {
         return;         
     }

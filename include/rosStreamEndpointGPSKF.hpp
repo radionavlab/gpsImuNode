@@ -31,8 +31,8 @@ public:
     }
 
     // More useful functions
-    void configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
-            Eigen::Matrix3d Recef2enu_in);
+    void configure(ros::NodeHandle &nh, Eigen::Vector3d &baseECEF_vector_in,
+            Eigen::Matrix3d &Recef2enu_in, Eigen::Matrix3d &Rwrw);
     void donothing(); //test function
     void singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg);
     void attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg);

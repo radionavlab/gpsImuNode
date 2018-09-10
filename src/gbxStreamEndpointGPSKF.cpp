@@ -12,19 +12,21 @@ GbxStreamEndpointGPSKF::GbxStreamEndpointGPSKF()
         gpsSec_=0;
         gpsWeek_=0;
         gpsFracSec_=0;
+        hasRosHandle=false;
 }
 
 GbxStreamEndpointGPSKF::~GbxStreamEndpointGPSKF() {
   closeSinkStream_();
 }
 
-void GbxStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
-            Eigen::Matrix3d Recef2enu_in)
+void GbxStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d &baseECEF_vector_in,
+            Eigen::Matrix3d &Recef2enu_in, Eigen::Matrix3d &Rwrw)
 {
     std::string GPSKFName, posePubTopic;
     GPSKFName = ros::this_node::getName();
     Recef2enu = Recef2enu_in;
     zeroInECEF_ = baseECEF_vector_in;
+    Rwrw_=Rwrw;
 
     ros::param::get(GPSKFName + "/posePubTopic", posePubTopic);
     ros::param::get(GPSKFName + "/minimumTestStat",minTestStat);
@@ -72,11 +74,10 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 }
 
 
-//A2D callback.  Takes in message from A2D, synchronizes with message from A2D, then calls UKF update
+//A2D callback.  Takes in message from A2D, synchronizes with message from SBRTK, then calls UKF update
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportAttitude2D>&& pReport, const u8 streamId)
 {
-
     int week, secOfWeek;
     double fracSec, dtRX;
     dtRX_=pReport->deltRSec();
@@ -115,8 +116,9 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
             weights(calibSamples)=0.5;
             RBI_=gpsimu_odom::rotMatFromWahba(weights,rCtildeCalib_,rBCalib_);
             rbiIsInitialized_=true;
-
-            doSetRBI0(RBI_);
+            
+            if(hasRosHandle)
+            {doSetRBI0(RBI_);}
         }
         return retval;
     }
@@ -146,15 +148,14 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
         double dtLastProc = ttime - lynxHelper_.getTLastProc();
         if(isCalibratedLynx_ && dtLastProc>0)
         {
-
-            runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
+            if(hasRosHandle)
+            {runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);}
         }
 
         //Reset to avoid publishing twice
         hasAlreadyReceivedRTK_=false; hasAlreadyReceivedA2D_=false;
         }
     }
-    retval = ProcessReportReturn::ACCEPTED;
     return retval;    
 }
 
@@ -163,6 +164,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId)
 {
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     int week, secOfWeek;
     double fracSec, dtRX;
     dtRX_=pReport->deltRSec();
@@ -183,7 +185,9 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
                 tmpvec(1) = pReport->ryRov() - zeroInECEF_(1);
                 tmpvec(2) = pReport->rzRov() - zeroInECEF_(2);
                 rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec - offsetToGround_;
-                doSetRprimary(rPrimaryMeas_); //sets rPrimaryMeas_ in estimationNode
+
+                if(hasRosHandle)
+                {doSetRprimary(rPrimaryMeas_);} //sets rPrimaryMeas_ in estimationNode
             }else
             {
                 validRTKtest_=false;
@@ -198,16 +202,14 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 
             if(isCalibratedLynx_ && dtLastProc>0)
             {
-
-                runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
-
+                if(hasRosHandle)
+                {runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);}
             }
 
             //Reset to avoid publishing twice
             hasAlreadyReceivedRTK_=false; hasAlreadyReceivedA2D_=false; 
         }
     }
-    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     return retval;
 }
 
@@ -259,12 +261,11 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportImu>&& pReport, const u8 streamId)
 {
     //If reports are being received but the pointer to the ros node is not available, exit
-    if(~hasRosHandle)
+    if(!hasRosHandle)
     {
         ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
         return retval;         
     }
-
 
     //Initialization variables
     static int counter=0;

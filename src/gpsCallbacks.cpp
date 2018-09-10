@@ -223,7 +223,7 @@ void estimationNode::publishOdomAndMocap()
     Eigen::Matrix<double,15,1> xState;
     Eigen::Vector3d imuAccel,imuAttRate;
     double tlastImuPub, tdmp;
-    imuFilterSnap_.getState(xState, RBI_);
+    imuFilterLynx_.getState(xState, RBI_);
 
     nav_msgs::Odometry localOdom_msg;
 
@@ -244,7 +244,7 @@ void estimationNode::publishOdomAndMocap()
     localOdom_msg.pose.pose.orientation.w=q0.w();
 
     //Remove biases
-    imuMeas tmpImuMeas = snapHelper_.getLastImuMeas();
+    imuMeas tmpImuMeas = lynxHelper_.getLastImuMeas();
     tmpImuMeas.getMeas(tdmp, imuAccel, imuAttRate);
     localOdom_msg.twist.twist.angular.x=imuAttRate(0)-xState(12);
     localOdom_msg.twist.twist.angular.y=imuAttRate(1)-xState(13);

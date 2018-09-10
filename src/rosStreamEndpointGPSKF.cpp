@@ -5,30 +5,32 @@
 #include "estimationNode.hpp"
 
 
-void rosStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d baseECEF_vector_in,
-            Eigen::Matrix3d Recef2enu_in)
+void rosStreamEndpointGPSKF::configure(ros::NodeHandle &nh, Eigen::Vector3d &baseECEF_vector_in,
+            Eigen::Matrix3d &Recef2enu_in, Eigen::Matrix3d &Rwrw)
 {
     std::string GPSKFName, posePubTopic;
     GPSKFName = ros::this_node::getName();
     Recef2enu = Recef2enu_in;
     baseECEF_vector_in = baseECEF_vector;
+    Rwrw_=Rwrw;
 
     ros::param::get(GPSKFName + "/posePubTopic", posePubTopic);
     ros::param::get(GPSKFName + "/minimumTestStat",minTestStat);
     ros::param::get(GPSKFName + "/runLynx",LYNX_IMU);
 
-    rtkSub_ = nh.subscribe("SingleBaselineRTK",10,&rosStreamEndpointGPSKF::singleBaselineRTKCallback,
-                                        this, ros::TransportHints().tcpNoDelay());
-    a2dSub_ = nh.subscribe("Attitude2D",10,&rosStreamEndpointGPSKF::attitude2DCallback,
-                                        this, ros::TransportHints().tcpNoDelay());
+    rtkSub_ = nh.subscribe("SingleBaselineRTK",1,&rosStreamEndpointGPSKF::singleBaselineRTKCallback,
+                                        this, ros::TransportHints().unreliable().tcpNoDelay());
+    a2dSub_ = nh.subscribe("Attitude2D",1,&rosStreamEndpointGPSKF::attitude2DCallback,
+                                        this, ros::TransportHints().unreliable().tcpNoDelay());
     imuSub_ = nh.subscribe("IMU",10, &rosStreamEndpointGPSKF::lynxImuCallback,
-                                        this, ros::TransportHints().tcpNoDelay());
-    imuConfigSub_ = nh.subscribe("IMUConfig",10, &rosStreamEndpointGPSKF::imuConfigCallback,
-                                        this, ros::TransportHints().tcpNoDelay());
-    navSub_ = nh.subscribe("NavigationSolution",10,&rosStreamEndpointGPSKF::navsolCallback,
-                                        this, ros::TransportHints().tcpNoDelay());
-    tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",10,&rosStreamEndpointGPSKF::tOffsetCallback,
-                                        this, ros::TransportHints().tcpNoDelay());
+                                        this, ros::TransportHints().unreliable().tcpNoDelay());
+    imuConfigSub_ = nh.subscribe("IMUConfig",1, &rosStreamEndpointGPSKF::imuConfigCallback,
+                                        this, ros::TransportHints().unreliable().tcpNoDelay());
+    navSub_ = nh.subscribe("NavigationSolution",1, &rosStreamEndpointGPSKF::navsolCallback,
+                                        this, ros::TransportHints().unreliable().tcpNoDelay());
+    tOffsetSub_ = nh.subscribe("ObservablesMeasurementTime",1, &rosStreamEndpointGPSKF::tOffsetCallback,
+                                        this, ros::TransportHints().unreliable().tcpNoDelay());
+    hasRosToUTC_=true;
 }
 
 
@@ -46,10 +48,10 @@ void rosStreamEndpointGPSKF::donothing()
 }
 
 
-//A2D callback.  Takes in message from A2D, synchronizes with message from A2D, then calls UKF update
+//A2D callback.  Takes in message from A2D, synchronizes with message from SBRTK, then calls UKF update
 void rosStreamEndpointGPSKF::attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg)
 {
-    if(~hasRosHandle)
+    if(!hasRosHandle)
     {return;}
     int week, secOfWeek;
     double fracSec, dtRX;
@@ -136,7 +138,7 @@ void rosStreamEndpointGPSKF::attitude2DCallback(const gbx_ros_bridge_msgs::Attit
 //SBRTK callback.  Takes in message from SBRTK, synchronizes with message from A2D, then calls UKF update
 void rosStreamEndpointGPSKF::singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg)
 {
-    if(~hasRosHandle)
+    if(!hasRosHandle)
     {return;}
     int week, secOfWeek;
     double fracSec, dtRX;
@@ -231,7 +233,7 @@ void rosStreamEndpointGPSKF::imuConfigCallback(const gbx_ros_bridge_msgs::ImuCon
 void rosStreamEndpointGPSKF::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg)
 {
     //If reports are being received but the pointer to the ros node is not available, exit
-    if(~hasRosHandle || ~LYNX_IMU)
+    if(!hasRosHandle || ~LYNX_IMU)
     {
         return;         
     }

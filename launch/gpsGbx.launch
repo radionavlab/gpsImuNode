@@ -27,7 +27,7 @@
         3 = vicon
         4 = rosbag
         Vicon will be implemented at a later date-->
-    <param name="nodeType" type="int" value="1"/>
+    <param name="nodeType" type="int" value="2"/>
 
     <param name="gbxport" type="int" value="$(arg gbxport)"/>
     <param name="minimumTestStat" value="5"/> <!--do not process measurements with worse teststat-->
@@ -38,6 +38,7 @@
     <param name="arenaCenterX_ENU" value="-0.10"/>  <!-- -0.553-->
     <param name="arenaCenterY_ENU" value="0.005"/>  <!-- -0.538-->
     <param name="arenaCenterZ_ENU" value="-0.05"/>   <!--5.720-->
+    <param name="thetaWRW" value="6.2"/> <!-- offset from ENU to WRW0 in degrees-->
 
     <param name="runLynx" type="bool" value="true"/>
     <param name="runSnap" type="bool" value="false"/>

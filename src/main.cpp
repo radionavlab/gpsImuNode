@@ -55,6 +55,16 @@ int main(int argc, char **argv)
     ros::param::get(quadName + "/arenaCenterZ", baseECEF_vector(2));
     Eigen::Matrix3d Recef2enu = gpsimu_odom::ecef2enu_rotMatrix(baseECEF_vector);
 
+    double thetaDeg, thetaRad;
+    ros::param::get(quadName + "/thetaWRW", thetaDeg);
+    thetaRad = thetaDeg*4.0*atan(1.0)/180.0;
+    Eigen::Matrix3d Rwrw(Eigen::Matrix3d::Zero());
+    Rwrw(2,2)=0.0;
+    Rwrw(0,0)=cos(thetaRad);
+    Rwrw(0,1)=-sin(thetaRad);
+    Rwrw(1,0)=sin(thetaRad);
+    Rwrw(1,1)=cos(thetaRad);
+
     if(mode==1) //online gbx stream
     {
         int gbxport;
@@ -68,7 +78,7 @@ int main(int argc, char **argv)
 
         int port=gbxport;
         auto epOutput = std::make_shared<GbxStreamEndpointGPSKF>();
-        epOutput->configure(nh, baseECEF_vector, Recef2enu);
+        epOutput->configure(nh, baseECEF_vector, Recef2enu, Rwrw);
         epOutput->setRosPointer(gpsimu);
         //gpsimu->setGbxPointer(epOutput); //not currently needed
         //epOutput->donothing(); //test
@@ -90,7 +100,7 @@ int main(int argc, char **argv)
     else if(mode==2)  //online ros stream
     {
         auto rosStream = std::make_shared<rosStreamEndpointGPSKF>();
-        rosStream->configure(nh, baseECEF_vector, Recef2enu);
+        rosStream->configure(nh, baseECEF_vector, Recef2enu,Rwrw);
         rosStream->setRosPointer(gpsimu);
     }else if(mode==3) //online ros stream from vicon
     {
@@ -98,7 +108,7 @@ int main(int argc, char **argv)
     }else if(mode==4) //post-process a ros stream (rosbag)
     {
         auto rosStream = std::make_shared<rosPlayback>();
-        rosStream->configure(nh,baseECEF_vector,Recef2enu);
+        rosStream->configure(nh,baseECEF_vector,Recef2enu,Rwrw);
         rosStream->setRosPointer(gpsimu);
     }
 
