@@ -123,7 +123,6 @@ void rosStreamEndpointGPSKF::attitude2DCallback(const gbx_ros_bridge_msgs::Attit
         double dtLastProc = ttime - lynxHelper_.getTLastProc();
         if(isCalibratedLynx_ && dtLastProc>0)
         {
-
             runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
         }
 
@@ -177,9 +176,7 @@ void rosStreamEndpointGPSKF::singleBaselineRTKCallback(const gbx_ros_bridge_msgs
 
             if(isCalibratedLynx_ && dtLastProc>0)
             {
-
                 runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
-
             }
 
             //Reset to avoid publishing twice
@@ -234,9 +231,7 @@ void rosStreamEndpointGPSKF::lynxImuCallback(const gbx_ros_bridge_msgs::Imu::Con
 {
     //If reports are being received but the pointer to the ros node is not available, exit
     if(!hasRosHandle || ~LYNX_IMU)
-    {
-        return;         
-    }
+    {return;}
 
 
     //Initialization variables

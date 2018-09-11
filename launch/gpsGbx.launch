@@ -17,6 +17,7 @@
     <param name="quadName" type="string" value="$(arg model)"/>
     <param name="rtktopic" type="string" value="SingleBaselineRTK"/>
     <param name="a2dtopic" type="string" value="Attitude2D"/>
+    <param name="viconTopic" type="string" value="phoenix/vicon"/>
     <param name="posePubTopic" type="string" value="selfpub"/>
     <param name="maxThrust" value="16.4808"/>
     <param name="useUDP" type="bool" value="false"/>

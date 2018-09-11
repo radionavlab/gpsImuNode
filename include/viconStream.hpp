@@ -1,6 +1,7 @@
 #pragma once
 
 #include "typedefs.h"
+#include "report.h"
 #include <Eigen/Geometry>
 #include <ros/ros.h>
 #include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>
@@ -17,10 +18,10 @@ namespace gpsimu_odom
     class estimationNode;
 }
 
-class rosStreamEndpointGPSKF
+class viconStream
 {
 public:
-    rosStreamEndpointGPSKF() {
+    viconStream() {
         hasAlreadyReceivedA2D_=false;
         hasAlreadyReceivedRTK_=false;
         gpsSec_=0;
@@ -58,6 +59,7 @@ private:
     Eigen::Matrix3d RBI, Recef2enu;
 
     std::string child_frame_id_;
+    //an internal helper is used to contain the time offset from ROSTIME to UTC
     filterHelper lynxHelper_;
     imuMeas lastImuMeasLynx_;
 

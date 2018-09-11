@@ -94,7 +94,7 @@ int main(int argc, char **argv)
         epOutput->filter(GbxStream::DEFAULT_PRIMARY).enableWhitelist();
     
         //make endpoint
-        auto epInput = std::make_shared<GbxStreamEndpointIN>(port, OptionObject::protocol_enum::IP_UDP, OptionObject::peer_type_enum::ROVER);
+        auto epInput = std::make_shared<GbxStreamEndpointIN>("192.168.2.2",port);
         gbxStream->resumeStream();
     }
     else if(mode==2)  //online ros stream

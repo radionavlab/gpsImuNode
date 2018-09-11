@@ -78,6 +78,9 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportAttitude2D>&& pReport, const u8 streamId)
 {
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
+    if(!hasRosHandle)
+    {return retval;}
     int week, secOfWeek;
     double fracSec, dtRX;
     dtRX_=pReport->deltRSec();
@@ -85,7 +88,6 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec) - dtRX;
     static int rCCalibCounter=0;
     static int calibSamples=20;
-    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     
     //Ignore zero messages
     if(week < 1)
@@ -117,8 +119,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
             RBI_=gpsimu_odom::rotMatFromWahba(weights,rCtildeCalib_,rBCalib_);
             rbiIsInitialized_=true;
             
-            if(hasRosHandle)
-            {doSetRBI0(RBI_);}
+            doSetRBI0(RBI_);
         }
         return retval;
     }
@@ -148,8 +149,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
         double dtLastProc = ttime - lynxHelper_.getTLastProc();
         if(isCalibratedLynx_ && dtLastProc>0)
         {
-            if(hasRosHandle)
-            {runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);}
+            runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
         }
 
         //Reset to avoid publishing twice
@@ -165,6 +165,8 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId)
 {
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
+    if(!hasRosHandle)
+    {return retval;}
     int week, secOfWeek;
     double fracSec, dtRX;
     dtRX_=pReport->deltRSec();
@@ -186,8 +188,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
                 tmpvec(2) = pReport->rzRov() - zeroInECEF_(2);
                 rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec - offsetToGround_;
 
-                if(hasRosHandle)
-                {doSetRprimary(rPrimaryMeas_);} //sets rPrimaryMeas_ in estimationNode
+                doSetRprimary(rPrimaryMeas_); //sets rPrimaryMeas_ in estimationNode
             }else
             {
                 validRTKtest_=false;
@@ -202,8 +203,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 
             if(isCalibratedLynx_ && dtLastProc>0)
             {
-                if(hasRosHandle)
-                {runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);}
+                runRosUKF(rPrimaryMeas_,rS2PMeas_,ttime);
             }
 
             //Reset to avoid publishing twice
@@ -260,12 +260,10 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportImu>&& pReport, const u8 streamId)
 {
+    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     //If reports are being received but the pointer to the ros node is not available, exit
     if(!hasRosHandle)
-    {
-        ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
-        return retval;         
-    }
+    {return retval;}
 
     //Initialization variables
     static int counter=0;
@@ -294,7 +292,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     if(dt<=1e-9) //Note: NOT abs(dt), as this checks whether or not messages are received out of order as well
     {
         std::cout << "Error: 1ns between IMU measurements" << std::endl;
-        return ProcessReportReturn::ACCEPTED;
+        return retval;
     }
     //Only update last time used IF this time is accepted
     tLastImu=thisTime;
@@ -364,7 +362,6 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
             rosHandle_->imuFilterLynx_.setState(xState,RBI_);
         }
     }
-    ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     return retval; 
 }
 
