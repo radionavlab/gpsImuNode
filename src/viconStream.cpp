@@ -53,9 +53,9 @@ void viconStream::viconCallback(const geometry_msgs::TransformStamped::ConstPtr 
     //all filters use a single constrained baseline
     Eigen::Matrix3d RR(quat);
     Eigen::Vector3d Ls2p=RR*Eigen::Vector3d(1,0,0);
-    rPrimary_(0) = msg->transform.position.x;
-    rPrimary_(1) = msg->transform.position.y;
-    rPrimary_(2) = msg->transform.position.z;
+    rPrimaryMeas_(0) = msg->transform.translation.x;
+    rPrimaryMeas_(1) = msg->transform.translation.y;
+    rPrimaryMeas_(2) = msg->transform.translation.z;
     
     double ttime = (ros::Time::now()).toSec();
 
@@ -66,7 +66,7 @@ void viconStream::viconCallback(const geometry_msgs::TransformStamped::ConstPtr 
         {
             //Doing a single iteration is sufficient with mm-level accuracy
             Eigen::Matrix<double,1,3> Lvert(0,0,1);
-            Eigen::Matrix<double,2,3> rB, rB;
+            Eigen::Matrix<double,2,3> rB, rC;
             Eigen::Matrix<double,2,1> weights(1,1);
             rC.topRows(1)=Lvert;
             rB.topRows(2)=Lvert;
@@ -75,10 +75,10 @@ void viconStream::viconCallback(const geometry_msgs::TransformStamped::ConstPtr 
             RBI_ = gpsimu_odom::rotMatFromWahba(weights, rC,rB);
             doSetRBI0(RBI_);
             rbiIsInitialized_=true;
-            doSetRPrimary(rPrimary_);
+            doSetRprimary(rPrimaryMeas_);
         }else
         {
-            doRunRosUKF(rPrimary_,Ls2p,ttime);
+            runRosUKF(rPrimaryMeas_,Ls2p,ttime);
         }
     }
     return;
