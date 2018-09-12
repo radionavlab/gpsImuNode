@@ -50,6 +50,7 @@ void viconStream::viconCallback(const geometry_msgs::TransformStamped::ConstPtr 
     quat.y() = msg->transform.rotation.y;
     quat.z() = msg->transform.rotation.z;
     quat.w() = msg->transform.rotation.w;
+    //all filters use a single constrained baseline
     Eigen::Matrix3d RR(quat);
     Eigen::Vector3d Ls2p=RR*Eigen::Vector3d(1,0,0);
     rPrimary_(0) = msg->transform.position.x;
@@ -63,6 +64,7 @@ void viconStream::viconCallback(const geometry_msgs::TransformStamped::ConstPtr 
         lastRTKtime_=ttime;
         if(!rbiIsInitialized_)
         {
+            //Doing a single iteration is sufficient with mm-level accuracy
             Eigen::Matrix<double,1,3> Lvert(0,0,1);
             Eigen::Matrix<double,2,3> rB, rB;
             Eigen::Matrix<double,2,1> weights(1,1);

@@ -186,7 +186,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
                 tmpvec(0) = pReport->rxRov() - zeroInECEF_(0); //error vector from ECEF at init time
                 tmpvec(1) = pReport->ryRov() - zeroInECEF_(1);
                 tmpvec(2) = pReport->rzRov() - zeroInECEF_(2);
-                rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec - offsetToGround_;
+                rPrimaryMeas_ = Rwrw_*Recef2enu_*tmpvec - offsetToGround_; //~5cm
 
                 doSetRprimary(rPrimaryMeas_); //sets rPrimaryMeas_ in estimationNode
             }else
