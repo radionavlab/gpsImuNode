@@ -1,15 +1,9 @@
 #pragma once
 
 #include "typedefs.h"
-#include "report.h"
 #include <Eigen/Geometry>
 #include <ros/ros.h>
-#include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>
-#include <gbx_ros_bridge_msgs/Attitude2D.h>
-#include <gbx_ros_bridge_msgs/Imu.h>
-#include <gbx_ros_bridge_msgs/ImuConfig.h>
-#include <gbx_ros_bridge_msgs/NavigationSolution.h>
-#include <gbx_ros_bridge_msgs/ObservablesMeasurementTime.h>
+#include <geometry_msgs/TransformStamped.h>
 #include "classes.hpp"
 
 //Namespace'd forward declaration
@@ -34,12 +28,7 @@ public:
     void configure(ros::NodeHandle &nh, Eigen::Vector3d &baseECEF_vector_in,
             Eigen::Matrix3d &Recef2enu_in, Eigen::Matrix3d &Rwrw);
     void donothing(); //test function
-    void singleBaselineRTKCallback(const gbx_ros_bridge_msgs::SingleBaselineRTK::ConstPtr &msg);
-    void attitude2DCallback(const gbx_ros_bridge_msgs::Attitude2D::ConstPtr &msg);
-    void imuConfigCallback(const gbx_ros_bridge_msgs::ImuConfig::ConstPtr &msg);
-    void lynxImuCallback(const gbx_ros_bridge_msgs::Imu::ConstPtr &msg);
-    void navsolCallback(const gbx_ros_bridge_msgs::NavigationSolution::ConstPtr &msg);
-    void tOffsetCallback(const gbx_ros_bridge_msgs::ObservablesMeasurementTime::ConstPtr &msg);    
+    void viconCallback(const geometry_msgs::TransformStamped::ConstPtr &msg);   
     void setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle);
     void runRosUKF(const Eigen::Vector3d pose, const Eigen::Vector3d Ls2p, const double ttime);
     void runRosUKFPropagate(const Eigen::Vector3d acc, const Eigen::Vector3d att, const double ttime);
@@ -50,6 +39,7 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
 private:
+    //This might need some cleanup
     std::shared_ptr<gpsimu_odom::estimationNode> rosHandle_;
     bool validRTKtest_, validA2Dtest_, hasAlreadyReceivedA2D_, hasAlreadyReceivedRTK_, hasRosHandle, LYNX_IMU;
     int gpsWeek_, gpsSec_, internalSeq, sec_in_week;;

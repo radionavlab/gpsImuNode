@@ -76,14 +76,9 @@ void viconStream::viconCallback(const geometry_msgs::TransformStamped::ConstPtr 
             doSetRPrimary(rPrimary_);
         }else
         {
-            rPrimary_
-
-
+            doRunRosUKF(rPrimary_,Ls2p,ttime);
         }
-
-        
     }
-    
     return;
 }
 
