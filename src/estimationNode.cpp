@@ -149,7 +149,7 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
 
     //Load IMU config data, establish saturations
     ROS_INFO("Waiting for IMU config data, this may take a moment...");
-    gbx_ros_bridge_msgs::ImuConfig::ConstPtr imuConfigMsg = 
+/*    gbx_ros_bridge_msgs::ImuConfig::ConstPtr imuConfigMsg = 
                 ros::topic::waitForMessage<gbx_ros_bridge_msgs::ImuConfig>("IMUConfig");
     imuConfigAccel_ = imuConfigMsg->lsbToMetersPerSecSq;
     imuConfigAttRate_ = imuConfigMsg->lsbToRadPerSec;
@@ -176,7 +176,7 @@ estimationNode::estimationNode(ros::NodeHandle &nh)
     gbx_ros_bridge_msgs::NavigationSolution::ConstPtr navsolMsg = 
                 ros::topic::waitForMessage<gbx_ros_bridge_msgs::NavigationSolution>("NavigationSolution");
     dtRXinMeters_ = navsolMsg->deltatRxMeters;
-    ROS_INFO("Time offset from RX to GPS obtained.");
+    ROS_INFO("Time offset from RX to GPS obtained.");*/
 
     ROS_INFO("Setting hard parameters for complementary filter.");
     //Lynx

@@ -25,8 +25,7 @@ public:
     }
 
     // More useful functions
-    void configure(ros::NodeHandle &nh, Eigen::Vector3d &baseECEF_vector_in,
-            Eigen::Matrix3d &Recef2enu_in, Eigen::Matrix3d &Rwrw);
+    void configure(ros::NodeHandle &nh, Eigen::Matrix3d &Rwrw);
     void donothing(); //test function
     void viconCallback(const geometry_msgs::TransformStamped::ConstPtr &msg);   
     void setRosPointer(std::shared_ptr<gpsimu_odom::estimationNode> rosHandle);

@@ -78,6 +78,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportAttitude2D>&& pReport, const u8 streamId)
 {
+        std::cout << "A2D" << std::endl;
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     if(!hasRosHandle)
     {return retval;}
@@ -164,6 +165,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId)
 {
+        std::cout << "SBRTK" << std::endl;
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     if(!hasRosHandle)
     {return retval;}

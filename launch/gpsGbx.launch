@@ -8,7 +8,7 @@
   <arg name="quad_namespace"/>
   <arg name="gbxport" default="5555"/>
 
-  <node pkg="gps_imu" type="gpsImu_node" name="gpsimuFilter"
+  <node pkg="gbx_imu" type="gpsImu_node" name="gpsimuFilter"
     output="$(arg output)" ns="$(arg quad_namespace)">
     <param name="child_frame_id" type="string" value="$(arg child_frame_id)"/>
     <param name="publish_tf" type="bool" value="$(arg publish_tf)"/>
@@ -28,7 +28,7 @@
         3 = vicon
         4 = rosbag
         Vicon will be implemented at a later date-->
-    <param name="nodeType" type="int" value="2"/>
+    <param name="nodeType" type="int" value="1"/>
 
     <param name="gbxport" type="int" value="$(arg gbxport)"/>
     <param name="minimumTestStat" value="5"/> <!--do not process measurements with worse teststat-->

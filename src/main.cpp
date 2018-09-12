@@ -3,6 +3,7 @@
 #include "gbxStreamEndpointGPSKF.hpp"
 #include "rosStreamEndpointGPSKF.hpp"
 #include "rosPlayback.hpp"
+#include "viconStream.hpp"
 #include <string>
 #include <iostream>
 #include "mathHelperFunctions.hpp"
@@ -96,25 +97,43 @@ int main(int argc, char **argv)
         //make endpoint
         auto epInput = std::make_shared<GbxStreamEndpointIN>("192.168.2.2",port);
         gbxStream->resumeStream();
+
+        if(!gbxStream->attachSinkEndpoint(epOutput))
+        {std::cerr << "Output attachment failed" << std::endl; return -1;}
+        if(!gbxStream->attachSourceEndpoint(epInput))
+        {std::cerr << "Input attachment failed" << std::endl; return -1;}
+
+        //Source/Sink detaches case long delays on shutdown
+        gbxStream->waitOnSourceDetach();
+        gbxStream->detachSinkEndpoint(epOutput.get());
+
+        ros::spin();
     }
     else if(mode==2)  //online ros stream
     {
         auto rosStream = std::make_shared<rosStreamEndpointGPSKF>();
         rosStream->configure(nh, baseECEF_vector, Recef2enu,Rwrw);
         rosStream->setRosPointer(gpsimu);
+        ros::spin();
     }else if(mode==3) //online ros stream from vicon
     {
-    
+        auto vistream = std::make_shared<viconStream>();
+        vistream->configure(nh,Rwrw);
+        vistream->setRosPointer(gpsimu);
+        ros::spin();
     }else if(mode==4) //post-process a ros stream (rosbag)
     {
         auto rosStream = std::make_shared<rosPlayback>();
         rosStream->configure(nh,baseECEF_vector,Recef2enu,Rwrw);
         rosStream->setRosPointer(gpsimu);
+        ros::spin();
     }
 
-
+/*
     ros::spin();
-    
+    gbxStream->waitOnSourceDetach();
+    gbxStream->detachSinkEndpoint(epOutput.get());
+*/    
     return 0;
 }
 

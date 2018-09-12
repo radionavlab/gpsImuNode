@@ -5,13 +5,10 @@
 #include "estimationNode.hpp"
 
 
-void viconStream::configure(ros::NodeHandle &nh, Eigen::Vector3d &baseECEF_vector_in,
-            Eigen::Matrix3d &Recef2enu_in, Eigen::Matrix3d &Rwrw)
+void viconStream::configure(ros::NodeHandle &nh, Eigen::Matrix3d &Rwrw)
 {
     std::string GPSKFName, posePubTopic;
     GPSKFName = ros::this_node::getName();
-    Recef2enu = Recef2enu_in;
-    baseECEF_vector_in = baseECEF_vector;
     std::string viconTopic;
     Rwrw_=Rwrw;
 
