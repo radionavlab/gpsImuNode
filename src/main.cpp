@@ -91,6 +91,7 @@ int main(int argc, char **argv)
             epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::IMU);
             epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::IMU_CONFIG);
             epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::NAVIGATION_SOLUTION);
+            epOutput->filter(GbxStream::DEFAULT_PRIMARY).addReportType(Report::OBSERVABLES_MEASUREMENT_TIME);
         }
         epOutput->filter(GbxStream::DEFAULT_PRIMARY).enableWhitelist();
     

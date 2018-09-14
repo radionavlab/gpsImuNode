@@ -81,7 +81,6 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportAttitude2D>&& pReport, const u8 streamId)
 {
-        std::cout << "A2D" << std::endl;
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     if(!hasRosHandle)
     {return retval;}
@@ -92,6 +91,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec) - dtRX;
     static int rCCalibCounter=0;
     static int calibSamples=20;
+    static bool hasA2D(false);
     
     //Ignore zero messages
     if(week < 1)
@@ -171,7 +171,6 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportSingleBaselineRtk>&& pReport, const u8 streamId)
 {
-        std::cout << "SBRTK" << std::endl;
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     if(!hasRosHandle)
     {return retval;}
@@ -180,6 +179,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     dtRX_=pReport->deltRSec();
     pReport->tSolution.get(week, secOfWeek, fracSec);
     double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec) - dtRX;
+    static bool hasRTK(false);
 
     if(ttime > lastRTKtime_)  //only use newest time
     {
@@ -225,11 +225,13 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 }
 
 
-
 //Checks navsol to get the most recent figures for dtRX
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportNavigationSolution>&& pReport, const u8 streamId)
 {
+    static bool init(false);
+    if(!init)
+    {init=true; ROS_INFO("Navsol is live.");};
     dtRXinMeters_ = pReport->deltatRxMeters();
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     imuBools[0]=true;
@@ -241,6 +243,9 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportObservablesMeasurementTime>&& pReport, const u8 streamId)
 {
+    static bool init(false);
+    if(!init)
+    {init=true; ROS_INFO("ObservablesMeasurementTime is live.");};
     int week, secOfWeek;
     double fracSec;
     pReport->tOffset.get(week, secOfWeek, fracSec);
@@ -256,7 +261,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportImuConfig>&& pReport, const u8 streamId)
 {
-    ROS_INFO("Config message received.");
+    ROS_INFO("IMU config message received.");
     imuConfigAccel_ = pReport->lsbToMetersPerSecSq(); //scaling to m/s2 from "non-engineering units"
     imuConfigAttRate_ = pReport->lsbToRadPerSec(); //scaling to rad/s from "non-engineering units"
     
@@ -270,10 +275,11 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 
 
 //The code is present here but has been disabled due to lynx vibrations
-//Callback for imu subscriber for the lynx
+//`Callback for imu subscriber for the lynx
 GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     std::shared_ptr<const ReportImu>&& pReport, const u8 streamId)
 {
+//        std::cout << "imu" << std::endl;
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     //If reports are being received but the pointer to the ros node is not available, exit
     if(!hasRosHandle)
