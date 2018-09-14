@@ -65,6 +65,7 @@ protected:
 private:
     std::shared_ptr<gpsimu_odom::estimationNode> rosHandle_;
     bool validRTKtest_, validA2Dtest_, hasAlreadyReceivedA2D_, hasAlreadyReceivedRTK_;
+    bool imuBools[3], hasRTK, hasA2D;
     int gpsWeek_, gpsSec_, internalSeq, sec_in_week;
     double gpsFracSec_, dtRX_, minTestStat, lastRTKtime, lastA2Dtime;
     Eigen::Quaterniond internalQuat;

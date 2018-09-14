@@ -1,7 +1,6 @@
 #pragma once
 
 #include "typedefs.h"
-#include "report.h"
 #include <Eigen/Geometry>
 #include <ros/ros.h>
 #include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>

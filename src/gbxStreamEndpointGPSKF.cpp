@@ -13,6 +13,9 @@ GbxStreamEndpointGPSKF::GbxStreamEndpointGPSKF()
         gpsWeek_=0;
         gpsFracSec_=0;
         hasRosHandle=false;
+        imuBools[0]=false;
+        imuBools[1]=false;
+        imuBools[2]=false;
 }
 
 GbxStreamEndpointGPSKF::~GbxStreamEndpointGPSKF() {
@@ -94,8 +97,11 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     if(week < 1)
     {return retval;}
 
-    if(!rbiIsInitialized_ && pReport->testStat()>=100)
+    if(!rbiIsInitialized_ && pReport->testStat()>=minTestStat_)
     {
+        if(!hasA2D)
+        {hasA2D=true; ROS_INFO("A2D is live.");}
+
         const Eigen::Vector3d constrainedBaselineECEF(pReport->rx(), pReport->ry(), pReport->rz());
         const Eigen::Vector3d constrainedBaselineI(gpsimu_odom::unit3(Rwrw_*Recef2enu_*constrainedBaselineECEF));
         rCtildeCalib_(rCCalibCounter%calibSamples,0)=constrainedBaselineI(0);
@@ -182,6 +188,9 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
         //If the message is accepted
         if(pReport->testStat() > minTestStat_)
             {
+                if(!hasRTK)
+                {hasRTK=true; ROS_INFO("SBRTK is live.");}
+
                 validRTKtest_=true;
                 Eigen::Vector3d tmpvec;
                 //Rotate rECEF to rI and store in rPrimaryMeas_
@@ -223,6 +232,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
 {
     dtRXinMeters_ = pReport->deltatRxMeters();
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
+    imuBools[0]=true;
     return retval; 
 }
 
@@ -237,6 +247,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     double ttime=gpsimu_odom::tgpsToSec(week,secOfWeek,fracSec);
     lynxHelper_.setTOffset(ttime);
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
+    imuBools[1]=true;
     return retval; 
 }
 
@@ -253,6 +264,7 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     sampleFreqDen_ = pReport->sampleFreqDenominator();
     tIndexConfig_ - pReport->tIndexk();
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
+    imuBools[2]=true;
     return retval; 
 }
 
@@ -265,6 +277,8 @@ GbxStreamEndpoint::ProcessReportReturn GbxStreamEndpointGPSKF::processReport_(
     ProcessReportReturn retval = ProcessReportReturn::ACCEPTED;
     //If reports are being received but the pointer to the ros node is not available, exit
     if(!hasRosHandle)
+    {return retval;}
+    if(!imuBools[0] || !imuBools[1] || !imuBools[2])
     {return retval;}
 
     //Initialization variables
